@@ -1989,9 +1989,11 @@ function openWhatsNew() {
   }
   const how = document.createElement('p');
   how.className = 'whatsnew-how';
-  how.textContent = behind
-    ? 'To apply it, restart the app: stop and reopen the codespace, or press Ctrl+C in its terminal and run npm start. Your wallets and history are kept.'
-    : '';
+  if (behind) {
+    how.textContent = settingsState.canSelfUpdate
+      ? 'Takes a few seconds: the app updates, restarts and this page reloads. Your wallets and history are kept.'
+      : 'To apply it, restart the app: stop and reopen the codespace, or press Ctrl+C in its terminal and run npm start. Your wallets and history are kept.';
+  }
   const actions = document.createElement('div');
   actions.className = 'modal-actions';
   const done = document.createElement('button');
@@ -1999,6 +2001,25 @@ function openWhatsNew() {
   done.className = 'btn';
   done.textContent = 'Close';
   actions.appendChild(done);
+  // One click: the app pulls the update, restarts, and the page reloads.
+  if (behind && settingsState.canSelfUpdate) {
+    const now = document.createElement('button');
+    now.type = 'button';
+    now.className = 'btn btn-primary';
+    now.textContent = 'Update now';
+    now.addEventListener('click', () => {
+      now.disabled = true;
+      done.disabled = true;
+      now.textContent = 'Updating…';
+      applyUpdate().catch((error) => {
+        now.textContent = 'Update now';
+        now.disabled = false;
+        done.disabled = false;
+        how.textContent = error.message;
+      });
+    });
+    actions.appendChild(now);
+  }
   card.append(title, list);
   if (how.textContent) card.appendChild(how);
   card.appendChild(actions);
@@ -2022,7 +2043,41 @@ function openWhatsNew() {
 }
 
 $('#update-note').addEventListener('click', openWhatsNew);
-setInterval(() => { loadSettings().catch(() => {}); }, 60 * 60 * 1000);
+
+/*
+ * Asks the app to update itself, waits for it to come back -- start.js pulls
+ * the update and restarts it, a few seconds -- and reloads the page onto the
+ * new version. Gives up after two minutes and says so.
+ */
+async function applyUpdate() {
+  await api('/api/update/apply', { method: 'POST' });
+  const started = Date.now();
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  while (Date.now() - started < 120_000) {
+    try {
+      await api('/api/settings');
+      location.reload();
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+  throw new Error('The app did not come back. Check its terminal, or run npm start.');
+}
+
+/*
+ * Fully automatic when nobody is looking: an update found while this tab is
+ * in the background is applied at once, and the page is on the new version
+ * when it is looked at again. (With no page open at all, the app does the
+ * same on its own after ten quiet minutes -- see server.js.)
+ */
+function autoUpdateIfUnseen() {
+  if (document.hidden && settingsState.canSelfUpdate && Number(settingsState.updateBehind) > 0) {
+    applyUpdate().catch(() => {});
+  }
+}
+document.addEventListener('visibilitychange', autoUpdateIfUnseen);
+setInterval(() => { loadSettings().then(autoUpdateIfUnseen).catch(() => {}); }, 60 * 60 * 1000);
 
 /*
  * Check for updates, now: the button says what it found for a few seconds,

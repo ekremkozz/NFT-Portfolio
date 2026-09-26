@@ -831,6 +831,11 @@ const STATIC_TYPES = {
  * Without git, or offline, nothing is shown.
  */
 const UPDATE_CHECK_MS = 60 * 60 * 1000;
+// Exit code that start.js takes as "pull the update and start me again".
+const UPDATE_EXIT = 75;
+const SUPERVISED = process.env.NFT_PORTFOLIO_SUPERVISED === '1';
+const IDLE_BEFORE_UPDATE_MS = 10 * 60 * 1000;
+let lastActivity = Date.now();
 let updateBehind = 0;
 // The waiting commits' titles, newest first: what an update would bring.
 let updateChanges = [];
@@ -883,6 +888,7 @@ function serveStatic(req, res, pathname) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const route = url.pathname;
+  lastActivity = Date.now();
   try {
     if (route === '/api/settings' && req.method === 'GET') {
       const config = readConfig();
@@ -895,7 +901,23 @@ const server = http.createServer(async (req, res) => {
         // What the last start pulled in, once: start.js writes it, the page
         // shows it and clears it.
         lastUpdate: readLastUpdate(),
+        // Started by start.js, which can pull an update and bring the app
+        // back; run as `node server.js` there is nobody to do that.
+        canSelfUpdate: SUPERVISED,
       });
+    }
+
+    /*
+     * "Update now": answer first, then exit with the code start.js reads as
+     * "pull and start me again". The page waits for the app to come back and
+     * reloads itself.
+     */
+    if (route === '/api/update/apply' && req.method === 'POST') {
+      if (!SUPERVISED) return send(res, 409, { error: 'Restart the app with npm start to update it' });
+      send(res, 200, { ok: true });
+      console.log('\n  Updating: the app will be back in a moment.');
+      setTimeout(() => process.exit(UPDATE_EXIT), 300);
+      return undefined;
     }
 
     // The "what changed" note has been read: it does not come back.
@@ -1020,5 +1042,17 @@ server.listen(PORT, HOST, () => {
   console.log('  (In a Codespace, use the link in the Ports tab or the pop-up.)');
   console.log('');
   checkForUpdate();
-  setInterval(checkForUpdate, UPDATE_CHECK_MS).unref();
+  /*
+   * Hourly: look for an update, and if there is one and nobody has used the
+   * app for ten minutes -- no page open, or one left in the background --
+   * apply it straight away. start.js pulls it and brings the app back; a
+   * page opened later is simply on the new version.
+   */
+  setInterval(async () => {
+    const behind = await checkForUpdate();
+    if (SUPERVISED && behind > 0 && Date.now() - lastActivity > IDLE_BEFORE_UPDATE_MS) {
+      console.log('\n  Update found while idle: applying it.');
+      process.exit(UPDATE_EXIT);
+    }
+  }, UPDATE_CHECK_MS).unref();
 });
