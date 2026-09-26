@@ -571,3 +571,14 @@ select:-webkit-autofill {
   position: absolute; top: 5px; right: 8px; font-family: var(--mono);
   font-size: 10px; line-height: 1; color: var(--faint); font-variant-numeric: tabular-nums;
 }
+
+/* No API key: the manual-add dialog says so in red, with the way to fix it. */
+.pf-manual-need {
+  margin: 0 0 12px; padding: 9px 12px; border-radius: 9px; font-size: 12.5px; line-height: 1.5;
+  color: var(--red); background: rgba(235, 87, 87, .1); border: 1px solid rgba(235, 87, 87, .35);
+}
+.pf-manual-need-btn {
+  background: none; border: 0; padding: 0; font: inherit; font-weight: 600;
+  color: var(--text); text-decoration: underline; cursor: pointer;
+}
+.pf-manual-card .btn:disabled, .pf-manual-card input:disabled { opacity: .45; cursor: not-allowed; }

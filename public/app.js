@@ -1440,6 +1440,22 @@ async function openManualNfts() {
   // A collection link needs a count; an item link is one piece.
   link.addEventListener('input', () => { qtyRow.hidden = !/\/collection\//i.test(link.value); });
 
+  /*
+   * Pricing a hand-added piece needs an OpenSea API key. Without one the
+   * dialog says so up front, in red, with the way to add it -- and Add stays
+   * off, rather than failing after the link has been pasted.
+   */
+  if (!settingsState.apiKeySet) {
+    const need = document.createElement('div');
+    need.className = 'pf-manual-need';
+    need.innerHTML = 'Adding NFTs by hand needs an OpenSea API key. '
+      + '<button type="button" class="pf-manual-need-btn">Add it in settings</button>';
+    need.querySelector('button').addEventListener('click', () => { close(); openSettings(false); });
+    modal.querySelector('.pf-manual-note').after(need);
+    save.disabled = true;
+    link.disabled = true;
+  }
+
   const close = () => { modal.remove(); document.removeEventListener('keydown', onKey); };
   const onKey = (event) => { if (event.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
