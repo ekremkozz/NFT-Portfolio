@@ -1510,7 +1510,6 @@ function tokenFigures(token) {
     return el;
   };
   const value = cell(formatUsd(token.usd), 'pf-money is-value');
-  const quantity = cell(compactQuantity(token.quantity), 'pf-mono');
 
   const wallets = document.createElement('div');
   wallets.className = 'pf-wallets-col';
@@ -1526,12 +1525,30 @@ function tokenFigures(token) {
   // Some tokens (ether among them) come without a unit price; the value
   // over the quantity is the same figure.
   const unit = token.priceUsd || (token.quantity ? token.usd / token.quantity : 0);
-  const price = cell(tokenPrice(unit), 'pf-mono');
+  // The price, and under it the day's change: one cell, the way the
+  // collections show the floor over the offer.
+  const price = cell(tokenPrice(unit), 'pf-mono pf-market');
   // priceChange arrives as a ratio, not a percentage.
   const pct = token.dayChange * 100;
-  const change = cell(token.dayChange ? `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%` : '—',
-    `pf-mono ${token.dayChange > 0 ? 'tok-up' : (token.dayChange < 0 ? 'tok-down' : '')}`);
-  return [value, quantity, wallets, price, change];
+  const change = document.createElement('div');
+  change.className = `pf-token-change ${token.dayChange > 0 ? 'tok-up' : (token.dayChange < 0 ? 'tok-down' : '')}`;
+  change.textContent = token.dayChange ? `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%` : '—';
+  price.appendChild(change);
+  return [wallets, value, price];
+}
+
+/*
+ * The name, and under it the amount held with its symbol -- beside the name
+ * rather than in a column of its own, as the collections show theirs.
+ */
+function tokenNameBlock(title, token) {
+  const text = document.createElement('span');
+  text.className = 'pf-token-text';
+  const amount = document.createElement('span');
+  amount.className = 'pf-token-amount';
+  amount.textContent = `${compactQuantity(token.quantity)} ${token.symbol || ''}`.trim();
+  text.append(title, amount);
+  return text;
 }
 
 const openTokenGroups = new Set();
@@ -1583,7 +1600,7 @@ function renderPortfolioTokens(tokens) {
     else if (token.image) icon.appendChild(stillImage(token.image, 30, ''));
     const label = document.createElement('b');
     label.textContent = token.name || token.symbol;
-    name.append(icon, label);
+    name.append(icon, tokenNameBlock(label, token));
     /*
      * A click opens the token on OpenSea, where the swap is. A token held on
      * one network: anywhere on its line. On several: its name, on the network
@@ -1635,7 +1652,7 @@ function renderPortfolioTokens(tokens) {
       subName.append(chainIcon(part.chain));
       const chainName = document.createElement('span');
       chainName.textContent = titleCaseChain(part.chain);
-      subName.appendChild(chainName);
+      subName.appendChild(tokenNameBlock(chainName, part));
       const blank = document.createElement('div');
       blank.className = 'pf-chain-col';
       /*
@@ -1666,7 +1683,7 @@ function renderPortfolioTokens(tokens) {
         pct.className = 'pf-share-pct';
         pct.textContent = share >= 0.01 ? `${Math.round(share * 100)}%` : '<1%';
         cell.append(track, pct);
-        figures.splice(3, 2, cell);
+        figures.splice(2, 1, cell);
       }
       sub.append(subName, blank, ...figures);
       if (tokenPageUrl(part)) {
