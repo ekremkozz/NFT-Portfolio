@@ -1,0 +1,5 @@
+# Your wallet list, API key, hand-added NFTs and price history. Never commit.
+data/
+node_modules/
+*.tmp
+.DS_Store
