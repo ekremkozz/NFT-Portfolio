@@ -835,6 +835,33 @@ const UPDATE_CHECK_MS = 60 * 60 * 1000;
 const UPDATE_EXIT = 75;
 const SUPERVISED = process.env.NFT_PORTFOLIO_SUPERVISED === '1';
 const IDLE_BEFORE_UPDATE_MS = 10 * 60 * 1000;
+// Any git checkout can update: under start.js by exiting, otherwise by
+// handing over to start.js (see applyUpdateNow).
+const CAN_SELF_UPDATE = SUPERVISED || fs.existsSync(path.join(__dirname, '.git'));
+
+/*
+ * Pulls the update and brings the app back on it. Under start.js: exit with
+ * the code it reads as "pull and start me again". Started some other way --
+ * `node server.js`, or a copy from before start.js existed -- nobody is there
+ * to do that, so this process frees the port and starts start.js itself,
+ * which pulls and runs the new version. This one stays only to keep the
+ * terminal attached, and ends when the new app does.
+ */
+function applyUpdateNow() {
+  if (SUPERVISED) {
+    setTimeout(() => process.exit(UPDATE_EXIT), 300);
+    return;
+  }
+  setTimeout(() => {
+    server.close();
+    if (server.closeAllConnections) server.closeAllConnections();
+    const { spawn } = require('child_process');
+    const child = spawn(process.execPath, [path.join(__dirname, 'start.js')], { cwd: __dirname, stdio: 'inherit' });
+    // Ctrl+C reaches the new app directly; this one waits for it to close.
+    process.on('SIGINT', () => {});
+    child.on('exit', (code) => process.exit(code || 0));
+  }, 300);
+}
 let lastActivity = Date.now();
 let updateBehind = 0;
 // The waiting commits' titles, newest first: what an update would bring.
@@ -901,9 +928,8 @@ const server = http.createServer(async (req, res) => {
         // What the last start pulled in, once: start.js writes it, the page
         // shows it and clears it.
         lastUpdate: readLastUpdate(),
-        // Started by start.js, which can pull an update and bring the app
-        // back; run as `node server.js` there is nobody to do that.
-        canSelfUpdate: SUPERVISED,
+        // Any git checkout: see applyUpdateNow.
+        canSelfUpdate: CAN_SELF_UPDATE,
       });
     }
 
@@ -913,10 +939,10 @@ const server = http.createServer(async (req, res) => {
      * reloads itself.
      */
     if (route === '/api/update/apply' && req.method === 'POST') {
-      if (!SUPERVISED) return send(res, 409, { error: 'Restart the app with npm start to update it' });
+      if (!CAN_SELF_UPDATE) return send(res, 409, { error: 'Restart the app with npm start to update it' });
       send(res, 200, { ok: true });
       console.log('\n  Updating: the app will be back in a moment.');
-      setTimeout(() => process.exit(UPDATE_EXIT), 300);
+      applyUpdateNow();
       return undefined;
     }
 
@@ -1050,9 +1076,9 @@ server.listen(PORT, HOST, () => {
    */
   setInterval(async () => {
     const behind = await checkForUpdate();
-    if (SUPERVISED && behind > 0 && Date.now() - lastActivity > IDLE_BEFORE_UPDATE_MS) {
+    if (CAN_SELF_UPDATE && behind > 0 && Date.now() - lastActivity > IDLE_BEFORE_UPDATE_MS) {
       console.log('\n  Update found while idle: applying it.');
-      process.exit(UPDATE_EXIT);
+      applyUpdateNow();
     }
   }, UPDATE_CHECK_MS).unref();
 });
