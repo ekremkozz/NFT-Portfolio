@@ -1825,17 +1825,103 @@ function ageText(ms) {
 
 
 /*
- * A newer version on GitHub: a quiet note in the header. The server checks
- * once an hour; restarting the app pulls the update before it starts.
+ * The note beside the title, in one of two states:
+ *   - a newer version is on GitHub (the server checks hourly): amber,
+ *     "Update available", and a click lists what it brings;
+ *   - the last start pulled one in: green, "Updated", and a click lists what
+ *     changed. Once read, that one goes away for good.
  */
 function paintUpdateNote() {
   const note = $('#update-note');
   if (!note) return;
   const behind = Number(settingsState.updateBehind) || 0;
-  note.hidden = !behind;
-  note.textContent = behind ? 'Update available · restart to apply' : '';
+  const applied = settingsState.lastUpdate && (settingsState.lastUpdate.changes || []).length;
+  note.classList.toggle('is-applied', !behind && Boolean(applied));
+  if (behind) note.textContent = 'Update available · what’s new';
+  else if (applied) note.textContent = 'Updated · what’s new';
+  note.hidden = !behind && !applied;
 }
+
+function openWhatsNew() {
+  const behind = Number(settingsState.updateBehind) || 0;
+  const changes = behind ? settingsState.updateChanges || [] : (settingsState.lastUpdate || {}).changes || [];
+  document.querySelector('.whatsnew-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.className = 'modal whatsnew-modal';
+  const card = document.createElement('div');
+  card.className = 'modal-card whatsnew-card';
+  const title = document.createElement('div');
+  title.className = 'modal-title';
+  title.textContent = behind ? 'A new version is available' : 'Updated to the latest version';
+  const list = document.createElement('ul');
+  list.className = 'whatsnew-list';
+  for (const change of changes) {
+    const item = document.createElement('li');
+    item.textContent = change;
+    list.appendChild(item);
+  }
+  const how = document.createElement('p');
+  how.className = 'whatsnew-how';
+  how.textContent = behind
+    ? 'To apply it, restart the app: stop and reopen the codespace, or press Ctrl+C in its terminal and run npm start. Your wallets and history are kept.'
+    : '';
+  const actions = document.createElement('div');
+  actions.className = 'modal-actions';
+  const done = document.createElement('button');
+  done.type = 'button';
+  done.className = 'btn';
+  done.textContent = 'Close';
+  actions.appendChild(done);
+  card.append(title, list);
+  if (how.textContent) card.appendChild(how);
+  card.appendChild(actions);
+  modal.appendChild(card);
+  document.body.appendChild(modal);
+
+  const close = () => {
+    modal.remove();
+    document.removeEventListener('keydown', onKey);
+    // An applied update's list is shown once.
+    if (!behind && settingsState.lastUpdate) {
+      settingsState.lastUpdate = null;
+      paintUpdateNote();
+      api('/api/update/seen', { method: 'POST' }).catch(() => {});
+    }
+  };
+  const onKey = (event) => { if (event.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  modal.addEventListener('mousedown', (event) => { if (event.target === modal) close(); });
+  done.addEventListener('click', close);
+}
+
+$('#update-note').addEventListener('click', openWhatsNew);
 setInterval(() => { loadSettings().catch(() => {}); }, 60 * 60 * 1000);
+
+/*
+ * Check for updates, now: the button says what it found for a few seconds,
+ * and a newer version also lights the note beside the title.
+ */
+$('#update-check').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  const label = button.querySelector('span');
+  if (button.disabled) return;
+  button.disabled = true;
+  label.textContent = 'Checking…';
+  let answer = null;
+  try { answer = await api('/api/update/check', { method: 'POST' }); } catch { /* shown below */ }
+  if (!answer || !answer.known) label.textContent = 'Could not check';
+  else if (answer.behind > 0) label.textContent = 'Update available';
+  else label.textContent = 'Up to date';
+  if (answer && answer.known) {
+    settingsState.updateBehind = answer.behind;
+    settingsState.updateChanges = answer.changes || [];
+    paintUpdateNote();
+  }
+  setTimeout(() => {
+    label.textContent = 'Check for updates';
+    button.disabled = false;
+  }, 4000);
+});
 
 /* ---------------------------------------------------------------- boot */
 

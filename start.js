@@ -21,7 +21,17 @@ if (fs.existsSync(path.join(here, '.git'))) {
     const before = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: here, encoding: 'utf8' }).trim();
     execFileSync('git', ['pull', '--ff-only', '--quiet'], { cwd: here, stdio: 'ignore', timeout: 30_000 });
     const after = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: here, encoding: 'utf8' }).trim();
-    console.log(before === after ? '\n  Up to date.' : '\n  Updated to the latest version.');
+    if (before === after) {
+      console.log('\n  Up to date.');
+    } else {
+      // What came in, for the page to show once: the commits' titles.
+      const changes = execFileSync('git', ['log', '--format=%s', `${before}..${after}`], { cwd: here, encoding: 'utf8' })
+        .split('\n').map((line) => line.trim()).filter(Boolean);
+      fs.mkdirSync(path.join(here, 'data'), { recursive: true });
+      fs.writeFileSync(path.join(here, 'data', 'last-update.json'), JSON.stringify({ at: Date.now(), changes }, null, 2));
+      console.log('\n  Updated to the latest version:');
+      for (const change of changes) console.log(`   - ${change}`);
+    }
   } catch {
     console.log('\n  Could not check for updates; starting the version here.');
   }

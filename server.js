@@ -832,14 +832,34 @@ const STATIC_TYPES = {
  */
 const UPDATE_CHECK_MS = 60 * 60 * 1000;
 let updateBehind = 0;
+// The waiting commits' titles, newest first: what an update would bring.
+let updateChanges = [];
 
+const LAST_UPDATE_PATH = path.join(DATA_DIR, 'last-update.json');
+
+function readLastUpdate() {
+  try {
+    return JSON.parse(fs.readFileSync(LAST_UPDATE_PATH, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/* Resolves to the commits behind, or null when it could not tell. */
 function checkForUpdate() {
-  if (!fs.existsSync(path.join(__dirname, '.git'))) return;
-  const { execFile } = require('child_process');
-  execFile('git', ['fetch', '--quiet'], { cwd: __dirname, timeout: 30_000 }, (fetchError) => {
-    if (fetchError) return;
-    execFile('git', ['rev-list', '--count', 'HEAD..@{upstream}'], { cwd: __dirname, timeout: 10_000 }, (error, out) => {
-      if (!error) updateBehind = Number(String(out).trim()) || 0;
+  return new Promise((resolve) => {
+    if (!fs.existsSync(path.join(__dirname, '.git'))) { resolve(null); return; }
+    const { execFile } = require('child_process');
+    execFile('git', ['fetch', '--quiet'], { cwd: __dirname, timeout: 30_000 }, (fetchError) => {
+      if (fetchError) { resolve(null); return; }
+      execFile('git', ['rev-list', '--count', 'HEAD..@{upstream}'], { cwd: __dirname, timeout: 10_000 }, (error, out) => {
+        if (error) { resolve(null); return; }
+        updateBehind = Number(String(out).trim()) || 0;
+        execFile('git', ['log', '--format=%s', '-n', '15', 'HEAD..@{upstream}'], { cwd: __dirname, timeout: 10_000 }, (logError, log) => {
+          updateChanges = logError ? [] : String(log).split('\n').map((s) => s.trim()).filter(Boolean);
+          resolve(updateBehind);
+        });
+      });
     });
   });
 }
@@ -871,7 +891,23 @@ const server = http.createServer(async (req, res) => {
         apiKeySet: Boolean(readOpenSeaKey()),
         apiKeyFromEnv: Boolean(String(process.env.OPENSEA_API_KEY || '').trim()),
         updateBehind,
+        updateChanges,
+        // What the last start pulled in, once: start.js writes it, the page
+        // shows it and clears it.
+        lastUpdate: readLastUpdate(),
       });
+    }
+
+    // The "what changed" note has been read: it does not come back.
+    if (route === '/api/update/seen' && req.method === 'POST') {
+      fs.rmSync(LAST_UPDATE_PATH, { force: true });
+      return send(res, 200, { ok: true });
+    }
+
+    // The header's "Check for updates": asked now rather than waiting the hour.
+    if (route === '/api/update/check' && req.method === 'POST') {
+      const behind = await checkForUpdate();
+      return send(res, 200, { behind, known: behind !== null, changes: updateChanges });
     }
 
     if (route === '/api/settings' && req.method === 'POST') {

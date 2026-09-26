@@ -612,3 +612,13 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: minmax(max-
   color: var(--amber); background: rgba(255, 171, 64, .1); border: 1px solid rgba(255, 171, 64, .35);
 }
 .update-note[hidden] { display: none; }
+button.lite-link { font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+button.lite-link:disabled { cursor: default; opacity: .8; }
+/* The note is a button: its list of changes is a click away. */
+button.update-note { font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+button.update-note:hover { background: rgba(255, 171, 64, .18); }
+.update-note.is-applied { color: var(--green); background: rgba(52, 199, 123, .1); border-color: rgba(52, 199, 123, .35); }
+button.update-note.is-applied:hover { background: rgba(52, 199, 123, .18); }
+.whatsnew-card { width: min(560px, 100%); }
+.whatsnew-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.5; }
+.whatsnew-how { margin: 14px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
