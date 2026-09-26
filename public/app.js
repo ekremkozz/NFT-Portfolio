@@ -1386,9 +1386,9 @@ function portfolioRow(group) {
   value.classList.add('is-value');
 
   /*
-   * Floor and top offer in one cell: the floor, and under it the offer with
-   * what share of the floor it is -- an offer far under the floor (below
-   * 75%) is marked, since selling into it loses the difference.
+   * Floor and top offer in one cell: the floor, and under it the offer --
+   * amber when it is under 75% of the floor, since selling into it loses
+   * the difference.
    */
   const market = money(group.floorUsd);
   market.classList.add('pf-market');
@@ -1396,7 +1396,7 @@ function portfolioRow(group) {
   offer.className = 'pf-offer';
   if (group.offerUsd) {
     const share = group.floorUsd ? Math.round((group.offerUsd / group.floorUsd) * 100) : 0;
-    offer.textContent = share ? `${formatUsd(group.offerUsd)} · ${share}%` : formatUsd(group.offerUsd);
+    offer.textContent = formatUsd(group.offerUsd);
     offer.classList.toggle('is-low', Boolean(share) && share < 75);
   } else {
     offer.textContent = '—';
