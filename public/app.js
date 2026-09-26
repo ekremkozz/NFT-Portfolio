@@ -1245,13 +1245,13 @@ document.addEventListener('click', () => {
 function fitPortfolioTables() {
   const layout = document.querySelector('.pf-layout');
   if (!layout || !layout.offsetParent) return;
-  // Down to the window's bottom edge, less what the card itself puts under
-  // the tables (its padding) and a small margin: the page does not scroll,
-  // and no strip of empty window is left under the card either.
+  // Down to the window's bottom edge, less everything the page puts under
+  // the tables -- the card's padding, the footer note -- so the page itself
+  // never scrolls and no strip of empty window is left either.
   const box = layout.getBoundingClientRect();
-  const card = layout.closest('.card');
-  const under = card ? Math.max(0, card.getBoundingClientRect().bottom - box.bottom) : 0;
-  const height = Math.max(320, Math.round(window.innerHeight - box.top - under - 16));
+  const pageBottom = document.documentElement.scrollHeight - window.scrollY;
+  const under = Math.max(0, pageBottom - box.bottom);
+  const height = Math.max(320, Math.round(window.innerHeight - box.top - under));
   layout.style.setProperty('--pf-h', `${height}px`);
 }
 window.addEventListener('resize', fitPortfolioTables);
