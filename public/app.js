@@ -1248,9 +1248,15 @@ function fitPortfolioTables() {
   // Down to the window's bottom edge, less everything the page puts under
   // the tables -- the card's padding, the footer note -- so the page itself
   // never scrolls and no strip of empty window is left either.
+  // Measured from fixed parts, not from the page's end: the page stretches
+  // to the window, so its end moves with the tables and the sum ran away.
   const box = layout.getBoundingClientRect();
-  const pageBottom = document.documentElement.scrollHeight - window.scrollY;
-  const under = Math.max(0, pageBottom - box.bottom);
+  const card = layout.closest('.card');
+  const main = layout.closest('main');
+  const foot = document.querySelector('.lite-foot');
+  const px = (el, prop) => (el ? parseFloat(getComputedStyle(el)[prop]) || 0 : 0);
+  const under = (card ? card.getBoundingClientRect().bottom - box.bottom : 0)
+    + px(card, 'marginBottom') + px(main, 'paddingBottom') + (foot ? foot.offsetHeight : 0);
   const height = Math.max(320, Math.round(window.innerHeight - box.top - under));
   layout.style.setProperty('--pf-h', `${height}px`);
 }
@@ -1623,6 +1629,16 @@ $('#portfolio-cards').addEventListener('scroll', (event) => {
 
 
 /* ---------------------------------------------------------------- boot */
+
+/*
+ * The support mint. Empty until there is one; the header link appears as
+ * soon as this is set.
+ */
+const SUPPORT_URL = '';
+if (SUPPORT_URL) {
+  $('#support-link').href = SUPPORT_URL;
+  $('#support-link').hidden = false;
+}
 
 $('#portfolio-settings').addEventListener('click', () => openSettings(false));
 
