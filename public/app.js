@@ -397,7 +397,12 @@ async function loadPortfolio(force) {
   }
   if (!data.available) {
     // No wallets yet: the setup opens instead of an error line.
-    if (data.reason === 'no-wallets') { summary.textContent = ''; openSettings(true); return; }
+    if (data.reason === 'no-wallets') {
+      summary.textContent = '';
+      // Never over an open one: rebuilding it wiped what was being typed.
+      if (!document.querySelector('.settings-modal')) openSettings(true);
+      return;
+    }
     summary.textContent = data.reason || 'Could not read the portfolio.';
     return;
   }
@@ -1529,7 +1534,8 @@ function portfolioIsOnScreen() {
 
 /* Renewed every five minutes while the page is in view; a hidden tab waits. */
 setInterval(() => {
-  if (document.hidden) return;
+  // Nothing to renew before a wallet is saved, or while the settings are open.
+  if (document.hidden || !settingsState.wallets.length || document.querySelector('.settings-modal')) return;
   if (Date.now() - portfolioFetchedAt < PORTFOLIO_REFRESH_MS) return;
   loadPortfolio(true);
 }, 30000);
@@ -1556,7 +1562,7 @@ function paintPortfolioUpdated() {
 setInterval(() => { if (portfolioIsOnScreen()) paintPortfolioUpdated(); }, 1000);
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) return;
+  if (document.hidden || !settingsState.wallets.length || document.querySelector('.settings-modal')) return;
   if (Date.now() - portfolioFetchedAt >= PORTFOLIO_REFRESH_MS) loadPortfolio(true);
 });
 
