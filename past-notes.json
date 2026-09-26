@@ -1,0 +1,33 @@
+{
+  "_": "Release notes for commits made before notes carried a TR: line. Keyed by the commit title; newer commits need no entry.",
+  "Collections table no longer stays half blank after scrolling": { "tr": "Koleksiyon tablosu kaydırınca yarım boş kalmıyor" },
+  "Update now works however the app was started, not only under npm start": { "tr": "\"Şimdi güncelle\" uygulama nasıl başlatılmış olursa olsun çalışıyor" },
+  "Koleksiyon ve token tablolarinin ustune arama; kaydirinca tablonun ustunde bos bant kalmiyor": {
+    "en": "Search above the collections and tokens tables; no blank band at the top after scrolling",
+    "tr": "Koleksiyon ve token tablolarının üstüne arama; kaydırınca tablonun üstünde boş bant kalmıyor"
+  },
+  "TR/EN dil secici: cumleler ve dugmeler cevrilir, kripto terimleri Ingilizce kalir": {
+    "en": "EN/TR language switch: sentences and buttons are translated, crypto terms stay in English",
+    "tr": "TR/EN dil seçici: cümleler ve düğmeler çevrilir, kripto terimleri İngilizce kalır"
+  },
+  "One wallet: no wallet labels on pieces, no Wallets columns": { "tr": "Tek cüzdanda itemlerde cüzdan etiketi ve Wallets sütunu yok" },
+  "Pop-up pieces in token-number order by default": { "tr": "Pop-up'taki itemler varsayılan olarak token numarasına göre sıralı" },
+  "Pop-up: values above the blur can be clicked and copied; pill filters": { "tr": "Pop-up: üstteki değerlere tıklanıp kopyalanabiliyor; filtreler pill oldu" },
+  "Update with one click, or on its own when nobody is looking": { "tr": "Tek tıkla güncelleme, kimse bakmıyorsa kendiliğinden" },
+  "Page drawn at 110% while the browser stays at 100%": { "tr": "Tarayıcı %100'deyken sayfa %110 boyutunda" },
+  "Search and filters in the collection pop-up; table keeps its scroll": { "tr": "Koleksiyon pop-up'ında arama ve filtreler; tablo kaydırma yerini koruyor" },
+  "Check for updates, and say what an update brings": { "tr": "Güncellemeleri kontrol et ve güncellemenin neler getirdiğini göster" },
+  "Updates itself: npm start pulls first, codespace starts on its own": { "tr": "Kendini güncelliyor: npm start önce günceller, codespace kendiliğinden başlar" },
+  "Smaller downloads, far fewer elements, steady header": { "tr": "Daha az indirme, çok daha hafif sayfa, sabit başlık" },
+  "Lighter page, and a meter to compare it with OpenSea's": { "tr": "Daha hafif sayfa ve OpenSea ile karşılaştırmak için ölçüm aracı" },
+  "One 12px spacing across the portfolio layout": { "tr": "Portfolyo düzeninde her yerde aynı 12px boşluk" },
+  "Manual add says up front that it needs an API key": { "tr": "Elle ekleme, API anahtarı gerektiğini baştan söylüyor" },
+  "Floor price heading shortened to Floor": { "tr": "Floor price başlığı Floor olarak kısaldı" },
+  "Number each piece in the collection pop-up": { "tr": "Koleksiyon pop-up'ında her item numaralı" },
+  "Read the whole item list, not the first 200 pieces": { "tr": "İlk 200 item değil, bütün item listesi okunuyor" },
+  "Loading shows in the counter pill, errors on a line of their own": { "tr": "Yükleniyor yazısı sayaçta, hatalar ayrı satırda" },
+  "GitHub and support links in the header; steadier table height": { "tr": "Başlıkta GitHub ve destek linkleri; tablo yüksekliği daha sabit" },
+  "Tables end at the window's edge, footer included": { "tr": "Tablolar alt yazıyla birlikte pencerenin kenarında bitiyor" },
+  "Setup window no longer resets while an address is typed": { "tr": "Kurulum penceresi adres yazılırken sıfırlanmıyor" },
+  "NFT Portfolio Lite: first version": { "tr": "NFT Portfolio Lite: ilk sürüm" }
+}

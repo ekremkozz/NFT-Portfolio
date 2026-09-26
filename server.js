@@ -875,9 +875,21 @@ let updateChanges = [];
 const CHANGE_FORMAT = '--format=%s%x1f%(trailers:key=TR,valueonly,separator=%x20)%x1e';
 function parseChanges(log) {
   return String(log).split('\x1e').map((record) => record.trim()).filter(Boolean).map((record) => {
-    const [en, tr = ''] = record.split('\x1f').map((part) => part.trim());
-    return tr ? { en, tr } : en;
+    const [title, tr = ''] = record.split('\x1f').map((part) => part.trim());
+    return noteFor(title, tr);
   });
+}
+
+/*
+ * A commit's note in both languages: its TR: line, or for commits made
+ * before those existed, past-notes.json. The title alone when neither has it.
+ */
+function noteFor(title, tr = '') {
+  if (tr) return { en: title, tr };
+  let past = {};
+  try { past = JSON.parse(fs.readFileSync(path.join(__dirname, 'past-notes.json'), 'utf8')); } catch { /* none */ }
+  const entry = past[title];
+  return entry && entry.tr ? { en: entry.en || title, tr: entry.tr } : title;
 }
 
 const LAST_UPDATE_PATH = path.join(DATA_DIR, 'last-update.json');
@@ -963,6 +975,28 @@ const server = http.createServer(async (req, res) => {
     if (route === '/api/update/seen' && req.method === 'POST') {
       fs.rmSync(LAST_UPDATE_PATH, { force: true });
       return send(res, 200, { ok: true });
+    }
+
+    /*
+     * The installed version's history: its latest commits, newest first,
+     * each with its date and titles. Also how the page finds the Turkish
+     * line for notes written as bare titles (by an older start.js).
+     */
+    if (route === '/api/update/history' && req.method === 'GET') {
+      if (!fs.existsSync(path.join(__dirname, '.git'))) return send(res, 200, { history: [] });
+      const { execFile } = require('child_process');
+      const log = await new Promise((resolve) => {
+        execFile('git', ['log', '-n', '40', '--format=%ct%x1f%s%x1f%(trailers:key=TR,valueonly,separator=%x20)%x1e'],
+          { cwd: __dirname, timeout: 10_000 }, (error, out) => resolve(error ? '' : String(out)));
+      });
+      const history = log.split('\x1e').map((record) => record.trim()).filter(Boolean).map((record) => {
+        const [at, title, tr = ''] = record.split('\x1f').map((part) => part.trim());
+        const note = noteFor(title, tr);
+        return typeof note === 'string'
+          ? { at: Number(at) * 1000, title, en: title, tr: '' }
+          : { at: Number(at) * 1000, title, en: note.en, tr: note.tr };
+      });
+      return send(res, 200, { history });
     }
 
     // The header's "Check for updates": asked now rather than waiting the hour.

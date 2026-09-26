@@ -101,6 +101,7 @@ const STRINGS = {
     noteApplied: 'Updated · what\u2019s new',
     newVersion: 'A new version is available',
     updatedLatest: 'Updated to the latest version',
+    updateHistory: 'Update history',
     howSelf: 'Takes a few seconds: the app updates, restarts and this page reloads. Your wallets and history are kept.',
     howManual: 'To apply it, restart the app: stop and reopen the codespace, or press Ctrl+C in its terminal and run npm start. Your wallets and history are kept.',
     updateNow: 'Update now',
@@ -171,6 +172,7 @@ const STRINGS = {
     noteApplied: 'Güncellendi · neler yeni',
     newVersion: 'Yeni sürüm var',
     updatedLatest: 'Son sürüme güncellendi',
+    updateHistory: 'Güncelleme geçmişi',
     howSelf: 'Birkaç saniye sürer: uygulama güncellenir, yeniden başlar ve bu sayfa yenilenir. Cüzdanların ve geçmişin korunur.',
     howManual: 'Uygulamak için uygulamayı yeniden başlat: codespace\u2019i kapatıp aç ya da terminalde Ctrl+C yapıp npm start yaz. Cüzdanların ve geçmişin korunur.',
     updateNow: 'Şimdi güncelle',
@@ -2205,9 +2207,32 @@ function paintUpdateNote() {
   note.hidden = !behind && !applied;
 }
 
-function openWhatsNew() {
+/*
+ * A change note in the page's language. Notes come as { en, tr } when the
+ * commit carried a Turkish line; a bare title (written by an older start.js)
+ * finds its Turkish in the history, when the history has it.
+ */
+function changeText(change, byTitle = new Map()) {
+  if (typeof change !== 'string') return (lang === 'tr' && change.tr) || change.en;
+  const known = byTitle.get(change);
+  return known ? changeText(known) : change;
+}
+
+function formatChangeDate(at) {
+  return new Date(at).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short' });
+}
+
+/*
+ * What an update brings, or what the last one brought, and under it the
+ * history of the version installed. With neither an update waiting nor one
+ * just applied -- "Check for updates" found it up to date -- only the history.
+ */
+async function openWhatsNew() {
   const behind = Number(settingsState.updateBehind) || 0;
   const changes = behind ? settingsState.updateChanges || [] : (settingsState.lastUpdate || {}).changes || [];
+  let history = [];
+  try { history = (await api('/api/update/history')).history || []; } catch { /* shown without it */ }
+  const byTitle = new Map(history.map((entry) => [entry.title || entry.en, entry]));
   document.querySelector('.whatsnew-modal')?.remove();
   const modal = document.createElement('div');
   modal.className = 'modal whatsnew-modal';
@@ -2215,14 +2240,40 @@ function openWhatsNew() {
   card.className = 'modal-card whatsnew-card';
   const title = document.createElement('div');
   title.className = 'modal-title';
-  title.textContent = behind ? t('newVersion') : t('updatedLatest');
+  title.textContent = behind ? t('newVersion') : changes.length ? t('updatedLatest') : t('updateHistory');
   const list = document.createElement('ul');
   list.className = 'whatsnew-list';
   for (const change of changes) {
     const item = document.createElement('li');
-    // { en, tr } when the commit carried a Turkish line; a plain title otherwise.
-    item.textContent = typeof change === 'string' ? change : (lang === 'tr' && change.tr) || change.en;
+    item.textContent = changeText(change, byTitle);
     list.appendChild(item);
+  }
+  // The installed version's history, dated; the notes above are not repeated.
+  const shown = new Set(changes.map((change) => (typeof change === 'string' ? change : change.en)));
+  const past = history.filter((entry) => !shown.has(entry.en) && !shown.has(entry.title));
+  let historyBox = null;
+  if (past.length) {
+    historyBox = document.createElement('div');
+    historyBox.className = 'whatsnew-history';
+    if (changes.length) {
+      const head = document.createElement('div');
+      head.className = 'whatsnew-history-head';
+      head.textContent = t('updateHistory');
+      historyBox.appendChild(head);
+    }
+    const rows = document.createElement('ul');
+    rows.className = 'whatsnew-history-list';
+    for (const entry of past) {
+      const row = document.createElement('li');
+      const date = document.createElement('span');
+      date.className = 'whatsnew-date';
+      date.textContent = formatChangeDate(entry.at);
+      const text = document.createElement('span');
+      text.textContent = changeText(entry);
+      row.append(date, text);
+      rows.appendChild(row);
+    }
+    historyBox.appendChild(rows);
   }
   const how = document.createElement('p');
   how.className = 'whatsnew-how';
@@ -2257,8 +2308,10 @@ function openWhatsNew() {
     });
     actions.appendChild(now);
   }
-  card.append(title, list);
+  card.appendChild(title);
+  if (changes.length) card.appendChild(list);
   if (how.textContent) card.appendChild(how);
+  if (historyBox) card.appendChild(historyBox);
   card.appendChild(actions);
   modal.appendChild(card);
   document.body.appendChild(modal);
@@ -2335,6 +2388,8 @@ $('#update-check').addEventListener('click', async (event) => {
     settingsState.updateBehind = answer.behind;
     settingsState.updateChanges = answer.changes || [];
     paintUpdateNote();
+    // Either way, the answer in full: what is new, or the history so far.
+    openWhatsNew();
   }
   setTimeout(() => {
     label.textContent = t('checkUpdates');

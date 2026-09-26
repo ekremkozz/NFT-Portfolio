@@ -626,6 +626,19 @@ button.update-note.is-applied:hover { background: rgba(52, 199, 123, .18); }
 .whatsnew-card { width: min(560px, 100%); }
 .whatsnew-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.5; }
 .whatsnew-how { margin: 14px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.whatsnew-history { margin-top: 16px; }
+.whatsnew-list + .whatsnew-history, .whatsnew-how + .whatsnew-history { padding-top: 14px; border-top: 1px solid var(--line); }
+.modal-title + .whatsnew-history { margin-top: 0; }
+.whatsnew-history-head {
+  margin-bottom: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+}
+.whatsnew-history-list {
+  margin: 0; padding: 0 4px 0 0; list-style: none; max-height: 280px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; line-height: 1.45;
+}
+.whatsnew-history-list li { display: grid; grid-template-columns: 56px 1fr; gap: 10px; }
+.whatsnew-date { font-family: var(--mono); font-size: 11.5px; color: var(--muted); padding-top: 1px; }
 
 /* Search and filters over a collection's pieces, above the pop-up's list. */
 .pf-items-tools {
