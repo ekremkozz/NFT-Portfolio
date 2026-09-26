@@ -2220,7 +2220,8 @@ function openWhatsNew() {
   list.className = 'whatsnew-list';
   for (const change of changes) {
     const item = document.createElement('li');
-    item.textContent = change;
+    // { en, tr } when the commit carried a Turkish line; a plain title otherwise.
+    item.textContent = typeof change === 'string' ? change : (lang === 'tr' && change.tr) || change.en;
     list.appendChild(item);
   }
   const how = document.createElement('p');

@@ -867,6 +867,19 @@ let updateBehind = 0;
 // The waiting commits' titles, newest first: what an update would bring.
 let updateChanges = [];
 
+/*
+ * Each commit's title, and its Turkish one when the message carries a
+ * "TR: ..." line: { en, tr }, or the title alone. The page shows the one
+ * for its language. (start.js reads the same way.)
+ */
+const CHANGE_FORMAT = '--format=%s%x1f%(trailers:key=TR,valueonly,separator=%x20)%x1e';
+function parseChanges(log) {
+  return String(log).split('\x1e').map((record) => record.trim()).filter(Boolean).map((record) => {
+    const [en, tr = ''] = record.split('\x1f').map((part) => part.trim());
+    return tr ? { en, tr } : en;
+  });
+}
+
 const LAST_UPDATE_PATH = path.join(DATA_DIR, 'last-update.json');
 
 function readLastUpdate() {
@@ -887,8 +900,8 @@ function checkForUpdate() {
       execFile('git', ['rev-list', '--count', 'HEAD..@{upstream}'], { cwd: __dirname, timeout: 10_000 }, (error, out) => {
         if (error) { resolve(null); return; }
         updateBehind = Number(String(out).trim()) || 0;
-        execFile('git', ['log', '--format=%s', '-n', '15', 'HEAD..@{upstream}'], { cwd: __dirname, timeout: 10_000 }, (logError, log) => {
-          updateChanges = logError ? [] : String(log).split('\n').map((s) => s.trim()).filter(Boolean);
+        execFile('git', ['log', CHANGE_FORMAT, '-n', '15', 'HEAD..@{upstream}'], { cwd: __dirname, timeout: 10_000 }, (logError, log) => {
+          updateChanges = logError ? [] : parseChanges(log);
           resolve(updateBehind);
         });
       });

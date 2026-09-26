@@ -33,13 +33,17 @@ function update() {
       console.log('\n  Up to date.');
       return;
     }
-    // What came in, for the page to show once: the commits' titles.
-    const changes = git(['log', '--format=%s', `${before}..${after}`])
-      .split('\n').map((line) => line.trim()).filter(Boolean);
+    // What came in, for the page to show once: the commits' titles, with
+    // the Turkish one from a "TR: ..." line where there is one.
+    const changes = git(['log', '--format=%s%x1f%(trailers:key=TR,valueonly,separator=%x20)%x1e', `${before}..${after}`])
+      .split('\x1e').map((record) => record.trim()).filter(Boolean).map((record) => {
+        const [en, tr = ''] = record.split('\x1f').map((part) => part.trim());
+        return tr ? { en, tr } : en;
+      });
     fs.mkdirSync(path.join(here, 'data'), { recursive: true });
     fs.writeFileSync(path.join(here, 'data', 'last-update.json'), JSON.stringify({ at: Date.now(), changes }, null, 2));
     console.log('\n  Updated to the latest version:');
-    for (const change of changes) console.log(`   - ${change}`);
+    for (const change of changes) console.log(`   - ${change.en || change}`);
   } catch {
     console.log('\n  Could not check for updates; starting the version here.');
   }
