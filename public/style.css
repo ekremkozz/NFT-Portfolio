@@ -605,3 +605,10 @@ section.tab[data-tab="portfolio"] .pf-stat-row .move-pill {
 /* Rather than trim the pill, the Total card widens to fit it; NFT and Token,
    which have room to spare, give way. Without a pill all three are equal. */
 section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: minmax(max-content, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
+
+/* A newer version is out: a small amber pill in the header. */
+.update-note {
+  align-self: center; padding: 3px 11px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  color: var(--amber); background: rgba(255, 171, 64, .1); border: 1px solid rgba(255, 171, 64, .35);
+}
+.update-note[hidden] { display: none; }

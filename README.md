@@ -17,12 +17,10 @@ OpenSea's own portfolio page ships megabytes of app code, a heatmap and animatio
 ## Start it in your browser (GitHub Codespaces — nothing to install)
 
 1. On this repository's page, click **Code** → **Codespaces** → **Create codespace on main**.
-2. When the terminal appears, type:
-   ```
-   npm start
-   ```
-3. Click the link that pops up (or open the **Ports** tab and click the globe next to port 4180).
-4. Paste your wallet address(es), give them a short name if you like, and save.
+2. Wait a moment: the app updates and starts by itself, and its page opens in a new tab. (If it doesn't, open the **Ports** tab and click the globe next to port 4180 — or type `npm start` in the terminal.)
+3. Paste your wallet address(es), give them a short name if you like, and save.
+
+**Staying up to date** is automatic: every start pulls the latest version first. When a new one comes out while the app is open, a small *Update available* note appears at the top — stop and reopen the codespace (or press Ctrl+C in its terminal and run `npm start`) to apply it. Your wallets and history are kept.
 
 The link Codespaces gives you is **private**: only you, signed in to your GitHub account, can open it. Keep it that way — don't make the port public.
 
@@ -81,8 +79,9 @@ If this saves you time, there is a support mint — *link coming soon*. It is a 
 ## Türkçe hızlı başlangıç
 
 1. Bu sayfada **Code** → **Codespaces** → **Create codespace on main**'e tıkla.
-2. Terminal açılınca `npm start` yaz.
-3. Çıkan bağlantıya tıkla (ya da **Ports** sekmesinde 4180'in yanındaki küreye).
-4. Cüzdan **adresini** (0x…) yapıştır, kaydet.
+2. Biraz bekle: uygulama kendini günceller, kendiliğinden başlar ve sayfası yeni sekmede açılır. (Açılmazsa **Ports** sekmesinde 4180'in yanındaki küreye tıkla ya da terminale `npm start` yaz.)
+3. Cüzdan **adresini** (0x…) yapıştır, kaydet.
+
+Güncelleme otomatik: her açılışta son sürüm alınır. Uygulama açıkken yeni sürüm çıkarsa üstte *Update available* notu çıkar; codespace'i kapatıp açman yeter.
 
 Bu uygulama **asla** private key ya da seed phrase istemez. İsteyen bir şey görürsen o bu uygulama değildir.

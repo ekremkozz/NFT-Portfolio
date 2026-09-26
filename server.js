@@ -823,6 +823,27 @@ const STATIC_TYPES = {
   '.ico': 'image/x-icon',
 };
 
+/* -------------------------------------------------------------- updates
+ *
+ * Once an hour, whether this repository has moved on: a `git fetch`, then
+ * how many commits the checkout is behind. The page shows a note when it
+ * is; restarting the app (which pulls first, see start.js) applies it.
+ * Without git, or offline, nothing is shown.
+ */
+const UPDATE_CHECK_MS = 60 * 60 * 1000;
+let updateBehind = 0;
+
+function checkForUpdate() {
+  if (!fs.existsSync(path.join(__dirname, '.git'))) return;
+  const { execFile } = require('child_process');
+  execFile('git', ['fetch', '--quiet'], { cwd: __dirname, timeout: 30_000 }, (fetchError) => {
+    if (fetchError) return;
+    execFile('git', ['rev-list', '--count', 'HEAD..@{upstream}'], { cwd: __dirname, timeout: 10_000 }, (error, out) => {
+      if (!error) updateBehind = Number(String(out).trim()) || 0;
+    });
+  });
+}
+
 function serveStatic(req, res, pathname) {
   const name = pathname === '/' ? 'index.html' : pathname.slice(1);
   const file = path.normalize(path.join(PUBLIC_DIR, name));
@@ -849,6 +870,7 @@ const server = http.createServer(async (req, res) => {
         wallets: config.wallets,
         apiKeySet: Boolean(readOpenSeaKey()),
         apiKeyFromEnv: Boolean(String(process.env.OPENSEA_API_KEY || '').trim()),
+        updateBehind,
       });
     }
 
@@ -939,10 +961,28 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+/*
+ * In a codespace the app starts by itself when it opens, so a second
+ * `npm start` finds the port taken. That is not an error worth a stack
+ * trace: the app is already there.
+ */
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.log('');
+    console.log(`  NFT Portfolio Lite is already running on port ${PORT}.`);
+    console.log('  Open it from the Ports tab, or stop the other one first.');
+    console.log('');
+    process.exit(0);
+  }
+  throw error;
+});
+
 server.listen(PORT, HOST, () => {
   console.log('');
   console.log('  NFT Portfolio Lite is running.');
   console.log(`  Open: http://localhost:${PORT}`);
   console.log('  (In a Codespace, use the link in the Ports tab or the pop-up.)');
   console.log('');
+  checkForUpdate();
+  setInterval(checkForUpdate, UPDATE_CHECK_MS).unref();
 });

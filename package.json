@@ -2,9 +2,9 @@
   "name": "nft-portfolio-lite",
   "version": "0.1.0",
   "description": "A light, read-only view of your OpenSea portfolio: NFTs and tokens across all your wallets, in two fast tables.",
-  "main": "server.js",
+  "main": "start.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node start.js"
   },
   "engines": {
     "node": ">=18"

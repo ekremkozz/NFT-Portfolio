@@ -1,7 +1,9 @@
 {
   "name": "NFT Portfolio Lite",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
-  "forwardPorts": [4180],
+  "forwardPorts": [
+    4180
+  ],
   "portsAttributes": {
     "4180": {
       "label": "NFT Portfolio Lite",
@@ -13,5 +15,6 @@
       "description": "Optional. Only needed to add NFTs by hand (staked or held by another contract). The portfolio itself works without it.",
       "documentationUrl": "https://docs.opensea.io/reference/api-keys"
     }
-  }
+  },
+  "postAttachCommand": "npm start"
 }

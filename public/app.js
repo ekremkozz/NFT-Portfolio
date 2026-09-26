@@ -173,6 +173,7 @@ let settingsState = { wallets: [], apiKeySet: false, apiKeyFromEnv: false };
 
 async function loadSettings() {
   settingsState = await api('/api/settings');
+  paintUpdateNote();
   walletLabelMap = Object.fromEntries(settingsState.wallets.filter((w) => w.label).map((w) => [w.address, w.label]));
   return settingsState;
 }
@@ -1822,6 +1823,19 @@ function ageText(ms) {
 }
 
 
+
+/*
+ * A newer version on GitHub: a quiet note in the header. The server checks
+ * once an hour; restarting the app pulls the update before it starts.
+ */
+function paintUpdateNote() {
+  const note = $('#update-note');
+  if (!note) return;
+  const behind = Number(settingsState.updateBehind) || 0;
+  note.hidden = !behind;
+  note.textContent = behind ? 'Update available · restart to apply' : '';
+}
+setInterval(() => { loadSettings().catch(() => {}); }, 60 * 60 * 1000);
 
 /* ---------------------------------------------------------------- boot */
 
