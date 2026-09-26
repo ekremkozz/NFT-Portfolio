@@ -28,6 +28,206 @@ function pageRect(el) {
 const viewWidth = () => window.innerWidth / pageZoom();
 const viewHeight = () => window.innerHeight / pageZoom();
 
+/* -------------------------------------------------------------- language
+ *
+ * English and Turkish. Sentences, buttons and messages are translated; the
+ * trade's own words -- NFT, Token, Floor, Top offer, the table headings --
+ * stay in English, as they are used in either language. The choice is kept
+ * in this browser; the first visit follows the browser's language.
+ */
+const STRINGS = {
+  en: {
+    brandNote: 'Read-only · addresses only · never asks for a key or seed phrase',
+    checkUpdates: 'Check for updates',
+    checking: 'Checking…',
+    couldNotCheck: 'Could not check',
+    updateAvailable: 'Update available',
+    upToDate: 'Up to date',
+    support: 'Support',
+    totalValue: 'Total value',
+    footer: 'Not affiliated with OpenSea. Reads the same data OpenSea\u2019s own site uses, which can change without notice.',
+    settingsFirst: 'Add your wallets',
+    settings: 'Settings',
+    settingsNote: 'Wallet <b>addresses</b> only (0x…). This app never asks for a private key or a seed phrase — if anything claiming to be it does, it is not this app.',
+    addWallet: '+ Add wallet',
+    apiKey: 'OpenSea API key',
+    apiKeyPlaceholder: 'Optional — only for adding NFTs by hand',
+    namePlaceholder: 'Name (optional)',
+    remove: 'Remove',
+    close: 'Close',
+    save: 'Save',
+    keyFromEnv: 'Set by the OPENSEA_API_KEY secret of this environment.',
+    keySaved: 'A key is saved. Leave blank to keep it; type a new one to replace it.',
+    keyNone: 'Not needed to view your portfolio. Stays on this machine; never sent to the page again.',
+    notAddress: 'Not a wallet address: {a}',
+    needWallet: 'Add at least one wallet address.',
+    allWallets: 'All wallets',
+    nWallets: '{n} wallets',
+    couldNotFetch: 'Could not fetch: {e}',
+    couldNotRead: 'Could not read the portfolio.',
+    serverDown: 'Could not reach the local server: {e}',
+    noItemsSelected: 'No items visible in the selected wallets.',
+    noItems: 'No items visible in these wallets.',
+    noPieces: 'No pieces match.',
+    searchPieces: 'Search name or #',
+    all: 'All',
+    byWallet: 'By wallet',
+    tokensError: 'Tokens could not be read from OpenSea. Refresh to try again.',
+    noTokens: 'No tokens in these wallets.',
+    backToTop: 'Back to the top',
+    historyTitle: 'Price changes · last 24 hours',
+    loading: 'Loading…',
+    noHistory: 'No price changes in the last 24 hours.',
+    manualTitle: 'Add an NFT by hand',
+    manualNote: 'For pieces OpenSea shows under none of your wallets, such as staked ones. Paste the item\u2019s OpenSea link, or the collection\u2019s link and how many you hold.',
+    openseaLink: 'OpenSea link',
+    howMany: 'How many',
+    wallet: 'Wallet',
+    add: 'Add',
+    adding: 'Adding…',
+    needKey: 'Adding NFTs by hand needs an OpenSea API key.',
+    addInSettings: 'Add it in settings',
+    addedByHand: 'Added by hand',
+    readingItems: 'Reading items… {n}',
+    updating: 'Updating…',
+    updatedAgo: 'Updated <b>{age}</b> ago <i>· every {m}m</i>',
+    ageSec: '{n}s',
+    ageMin: '{n}m',
+    ageHour: '{n}h',
+    noteAvailable: 'Update available · what\u2019s new',
+    noteApplied: 'Updated · what\u2019s new',
+    newVersion: 'A new version is available',
+    updatedLatest: 'Updated to the latest version',
+    howSelf: 'Takes a few seconds: the app updates, restarts and this page reloads. Your wallets and history are kept.',
+    howManual: 'To apply it, restart the app: stop and reopen the codespace, or press Ctrl+C in its terminal and run npm start. Your wallets and history are kept.',
+    updateNow: 'Update now',
+    noComeBack: 'The app did not come back. Check its terminal, or run npm start.',
+  },
+  tr: {
+    brandNote: 'Sadece okur · sadece adres · asla key ya da seed phrase istemez',
+    checkUpdates: 'Güncellemeleri kontrol et',
+    checking: 'Kontrol ediliyor…',
+    couldNotCheck: 'Kontrol edilemedi',
+    updateAvailable: 'Güncelleme var',
+    upToDate: 'Güncel',
+    support: 'Destek',
+    totalValue: 'Toplam değer',
+    footer: 'OpenSea ile bağlantısı yoktur. OpenSea\u2019nin kendi sitesinin kullandığı verileri okur; bu veriler haber verilmeden değişebilir.',
+    settingsFirst: 'Cüzdanlarını ekle',
+    settings: 'Ayarlar',
+    settingsNote: 'Sadece cüzdan <b>adresi</b> (0x…). Bu uygulama asla private key ya da seed phrase istemez — isteyen bir şey görürsen o bu uygulama değildir.',
+    addWallet: '+ Cüzdan ekle',
+    apiKey: 'OpenSea API anahtarı',
+    apiKeyPlaceholder: 'İsteğe bağlı — sadece elle NFT eklemek için',
+    namePlaceholder: 'İsim (isteğe bağlı)',
+    remove: 'Kaldır',
+    close: 'Kapat',
+    save: 'Kaydet',
+    keyFromEnv: 'Bu ortamın OPENSEA_API_KEY secret\u2019ı ile ayarlı.',
+    keySaved: 'Kayıtlı bir anahtar var. Korumak için boş bırak, değiştirmek için yenisini yaz.',
+    keyNone: 'Portfolyonu görmek için gerekmez. Bu makinede kalır, sayfaya bir daha gönderilmez.',
+    notAddress: 'Cüzdan adresi değil: {a}',
+    needWallet: 'En az bir cüzdan adresi ekle.',
+    allWallets: 'Tüm cüzdanlar',
+    nWallets: '{n} cüzdan',
+    couldNotFetch: 'Alınamadı: {e}',
+    couldNotRead: 'Portfolyo okunamadı.',
+    serverDown: 'Yerel sunucuya ulaşılamadı: {e}',
+    noItemsSelected: 'Seçili cüzdanlarda görünen item yok.',
+    noItems: 'Bu cüzdanlarda görünen item yok.',
+    noPieces: 'Eşleşen item yok.',
+    searchPieces: 'İsim ya da # ara',
+    all: 'Tümü',
+    byWallet: 'Cüzdana göre',
+    tokensError: 'Tokenler OpenSea\u2019den okunamadı. Tekrar denemek için yenile.',
+    noTokens: 'Bu cüzdanlarda token yok.',
+    backToTop: 'Başa dön',
+    historyTitle: 'Fiyat değişimleri · son 24 saat',
+    loading: 'Yükleniyor…',
+    noHistory: 'Son 24 saatte fiyat değişimi yok.',
+    manualTitle: 'Elle NFT ekle',
+    manualNote: 'OpenSea\u2019nin hiçbir cüzdanında göstermediği parçalar için, örneğin stake edilmiş olanlar. İtemin OpenSea linkini ya da koleksiyonun linkini ve kaç tane tuttuğunu yapıştır.',
+    openseaLink: 'OpenSea linki',
+    howMany: 'Kaç tane',
+    wallet: 'Cüzdan',
+    add: 'Ekle',
+    adding: 'Ekleniyor…',
+    needKey: 'Elle NFT eklemek için OpenSea API anahtarı gerekir.',
+    addInSettings: 'Ayarlardan ekle',
+    addedByHand: 'Elle eklenenler',
+    readingItems: 'Itemler okunuyor… {n}',
+    updating: 'Güncelleniyor…',
+    updatedAgo: '<b>{age}</b> önce güncellendi <i>· {m} dk\u2019da bir</i>',
+    ageSec: '{n} sn',
+    ageMin: '{n} dk',
+    ageHour: '{n} sa',
+    noteAvailable: 'Güncelleme var · neler yeni',
+    noteApplied: 'Güncellendi · neler yeni',
+    newVersion: 'Yeni sürüm var',
+    updatedLatest: 'Son sürüme güncellendi',
+    howSelf: 'Birkaç saniye sürer: uygulama güncellenir, yeniden başlar ve bu sayfa yenilenir. Cüzdanların ve geçmişin korunur.',
+    howManual: 'Uygulamak için uygulamayı yeniden başlat: codespace\u2019i kapatıp aç ya da terminalde Ctrl+C yapıp npm start yaz. Cüzdanların ve geçmişin korunur.',
+    updateNow: 'Şimdi güncelle',
+    noComeBack: 'Uygulama geri gelmedi. Terminaline bak ya da npm start çalıştır.',
+  },
+};
+
+/* The server's own messages, where a Turkish one exists. */
+const SERVER_MESSAGES_TR = {
+  'Paste an OpenSea item or collection link': 'Bir OpenSea item ya da koleksiyon linki yapıştır',
+  'The OpenSea API key is not valid': 'OpenSea API anahtarı geçerli değil',
+  'OpenSea is rate-limiting us right now; try again shortly': 'OpenSea şu an istekleri kısıtlıyor, biraz sonra tekrar dene',
+  'Adding a single item needs the OpenSea API key (Settings)': 'Tek bir item eklemek için OpenSea API anahtarı gerekir (Ayarlar)',
+  'Pricing hand-added NFTs needs the OpenSea API key (Settings)': 'Elle eklenen NFT\u2019lerin fiyatı için OpenSea API anahtarı gerekir (Ayarlar)',
+  'OpenSea does not know this item': 'OpenSea bu itemi tanımıyor',
+  'Restart the app with npm start to update it': 'Güncellemek için uygulamayı npm start ile yeniden başlat',
+};
+
+const LANG_KEY = 'nftPortfolio.lang';
+let lang = (() => {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved === 'en' || saved === 'tr') return saved;
+  } catch { /* private window */ }
+  return String(navigator.language || '').toLowerCase().startsWith('tr') ? 'tr' : 'en';
+})();
+
+function t(key, vars = {}) {
+  const text = (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || key;
+  return text.replace(/\{(\w+)\}/g, (whole, name) => (name in vars ? String(vars[name]) : whole));
+}
+
+function serverText(message) {
+  return lang === 'tr' ? SERVER_MESSAGES_TR[message] || message : message;
+}
+
+/* The fixed words of the page: elements marked data-i18n in index.html. */
+function applyStaticText() {
+  document.documentElement.lang = lang;
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  for (const button of document.querySelectorAll('.lang-switch button')) {
+    button.classList.toggle('is-on', button.dataset.lang === lang);
+  }
+}
+
+function setLanguage(next) {
+  if (next === lang) return;
+  lang = next;
+  try { localStorage.setItem(LANG_KEY, lang); } catch { /* not kept */ }
+  applyStaticText();
+  // Whatever is open was written in the old language: close it.
+  document.querySelectorAll('.modal').forEach((modal) => modal.remove());
+  if (typeof renderPortfolioView === 'function' && portfolioLoaded) renderPortfolioView();
+  if (typeof paintPortfolioUpdated === 'function') paintPortfolioUpdated();
+  if (typeof paintUpdateNote === 'function') paintUpdateNote();
+  if (typeof syncPortfolioChips === 'function') syncPortfolioChips();
+}
+
+document.querySelectorAll('.lang-switch button').forEach((button) => {
+  button.addEventListener('click', () => setLanguage(button.dataset.lang));
+});
+applyStaticText();
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     ...options,
@@ -201,20 +401,19 @@ function openSettings(firstRun = false) {
   modal.className = 'modal settings-modal';
   modal.innerHTML = `
     <div class="modal-card settings-card">
-      <div class="modal-title">${firstRun ? 'Add your wallets' : 'Settings'}</div>
-      <p class="settings-note">Wallet <b>addresses</b> only (0x…). This app never asks for a private key or a seed phrase —
-        if anything claiming to be it does, it is not this app.</p>
+      <div class="modal-title">${firstRun ? t('settingsFirst') : t('settings')}</div>
+      <p class="settings-note">${t('settingsNote')}</p>
       <div class="settings-wallets" id="settings-wallets"></div>
-      <button class="btn btn-mini" id="settings-add-wallet" type="button">+ Add wallet</button>
+      <button class="btn btn-mini" id="settings-add-wallet" type="button">${t('addWallet')}</button>
       <div class="settings-key">
-        <label class="modal-field"><span>OpenSea API key</span>
-          <input id="settings-api-key" type="password" autocomplete="off" placeholder="Optional — only for adding NFTs by hand"></label>
+        <label class="modal-field"><span>${t('apiKey')}</span>
+          <input id="settings-api-key" type="password" autocomplete="off" placeholder="${t('apiKeyPlaceholder')}"></label>
         <p class="settings-hint" id="settings-key-hint"></p>
       </div>
       <p class="pf-manual-error" id="settings-error"></p>
       <div class="modal-actions">
-        ${firstRun ? '' : '<button class="btn" id="settings-cancel" type="button">Close</button>'}
-        <button class="btn btn-primary" id="settings-save" type="button">Save</button>
+        ${firstRun ? '' : `<button class="btn" id="settings-cancel" type="button">${t('close')}</button>`}
+        <button class="btn btn-primary" id="settings-save" type="button">${t('save')}</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -224,8 +423,8 @@ function openSettings(firstRun = false) {
     const row = document.createElement('div');
     row.className = 'settings-wallet';
     row.innerHTML = '<input class="sw-address" type="text" placeholder="0x…" spellcheck="false" autocomplete="off">'
-      + '<input class="sw-label" type="text" placeholder="Name (optional)" maxlength="24" autocomplete="off">'
-      + '<button class="btn btn-mini is-icon sw-remove" type="button" aria-label="Remove">'
+      + `<input class="sw-label" type="text" placeholder="${t('namePlaceholder')}" maxlength="24" autocomplete="off">`
+      + `<button class="btn btn-mini is-icon sw-remove" type="button" aria-label="${t('remove')}">`
       + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>';
     row.querySelector('.sw-address').value = wallet.address;
     row.querySelector('.sw-label').value = wallet.label || '';
@@ -240,12 +439,12 @@ function openSettings(firstRun = false) {
   const hint = modal.querySelector('#settings-key-hint');
   const keyInput = modal.querySelector('#settings-api-key');
   if (settingsState.apiKeyFromEnv) {
-    hint.textContent = 'Set by the OPENSEA_API_KEY secret of this environment.';
+    hint.textContent = t('keyFromEnv');
     keyInput.disabled = true;
   } else if (settingsState.apiKeySet) {
-    hint.textContent = 'A key is saved. Leave blank to keep it; type a new one to replace it.';
+    hint.textContent = t('keySaved');
   } else {
-    hint.textContent = 'Not needed to view your portfolio. Stays on this machine; never sent to the page again.';
+    hint.textContent = t('keyNone');
   }
 
   const close = () => { modal.remove(); document.removeEventListener('keydown', onKey); };
@@ -260,8 +459,8 @@ function openSettings(firstRun = false) {
       .map((row) => ({ address: row.querySelector('.sw-address').value.trim(), label: row.querySelector('.sw-label').value.trim() }))
       .filter((w) => w.address);
     const bad = wallets.find((w) => !/^0x[0-9a-fA-F]{40}$/.test(w.address));
-    if (bad) { error.textContent = `Not a wallet address: ${bad.address}`; return; }
-    if (!wallets.length) { error.textContent = 'Add at least one wallet address.'; return; }
+    if (bad) { error.textContent = t('notAddress', { a: bad.address }); return; }
+    if (!wallets.length) { error.textContent = t('needWallet'); return; }
     const body = { wallets };
     if (keyInput.value.trim()) body.apiKey = keyInput.value.trim();
     try {
@@ -270,7 +469,7 @@ function openSettings(firstRun = false) {
       close();
       loadPortfolio(true);
     } catch (err) {
-      error.textContent = err.message;
+      error.textContent = serverText(err.message);
     }
   });
 }
@@ -371,9 +570,9 @@ function syncPortfolioChips() {
   const trigger = $('#portfolio-wallet-trigger');
   if (trigger) {
     const only = [...portfolioFilter];
-    trigger.textContent = !only.length ? 'All wallets'
+    trigger.textContent = !only.length ? t('allWallets')
       : only.length === 1 ? walletDisplay(only[0])
-        : `${only.length} wallets`;
+        : t('nWallets', { n: only.length });
     trigger.classList.toggle('is-on', only.length > 0);
   }
   const summary = $('#portfolio-filter-note');
@@ -401,7 +600,7 @@ async function loadPortfolio(force) {
   try {
     data = await api('/api/portfolio');
   } catch (error) {
-    summary.textContent = 'Could not fetch: ' + error.message;
+    summary.textContent = t('couldNotFetch', { e: error.message });
     return;
   } finally {
     portfolioUpdating = false;
@@ -414,7 +613,7 @@ async function loadPortfolio(force) {
       if (!document.querySelector('.settings-modal')) openSettings(true);
       return;
     }
-    summary.textContent = data.reason || 'Could not read the portfolio.';
+    summary.textContent = data.reason || t('couldNotRead');
     return;
   }
 
@@ -458,7 +657,7 @@ async function loadPortfolio(force) {
   clear.type = 'button';
   clear.id = 'portfolio-filter-clear';
   clear.className = 'portfolio-wallet pf-wallet-option is-clear';
-  clear.textContent = 'All wallets';
+  clear.textContent = t('allWallets');
   clear.addEventListener('click', () => {
     portfolioFilter.clear();
     renderPortfolioView();
@@ -616,8 +815,8 @@ function renderPortfolioCards() {
   forgetPictures(rows);
   if (!groups.length) {
     rows.innerHTML = portfolioFilter.size
-      ? '<div class="empty-sub">No items visible in the selected wallets.</div>'
-      : '<div class="empty-sub">No items visible in these wallets.</div>';
+      ? `<div class="empty-sub">${t('noItemsSelected')}</div>`
+      : `<div class="empty-sub">${t('noItems')}</div>`;
     return;
   }
   // Emptying the list resets its scroll; a refresh must leave the reader
@@ -834,7 +1033,7 @@ function openPortfolioItems(group, row) {
     if (!shown.length) {
       const none = document.createElement('div');
       none.className = 'pf-items-none';
-      none.textContent = 'No pieces match.';
+      none.textContent = t('noPieces');
       grid.appendChild(none);
     }
   };
@@ -846,7 +1045,7 @@ function openPortfolioItems(group, row) {
     const search = document.createElement('input');
     search.type = 'search';
     search.className = 'pf-items-search';
-    search.placeholder = 'Search name or #';
+    search.placeholder = t('searchPieces');
     search.autocomplete = 'off';
     search.spellcheck = false;
     search.addEventListener('input', () => { view.query = search.value; drawPieces(); });
@@ -868,7 +1067,7 @@ function openPortfolioItems(group, row) {
         view.wallet = address;
         wallets.querySelectorAll('.pf-items-chip').forEach((b) => b.classList.toggle('is-on', b === button));
       };
-      wallets.appendChild(chip('All', true, pick('')));
+      wallets.appendChild(chip(t('all'), true, pick('')));
       for (const address of owners) {
         const name = walletLabelMap[address.toLowerCase()] || `${address.slice(0, 6)}…${address.slice(-4)}`;
         wallets.appendChild(chip(name, false, pick(address)));
@@ -883,7 +1082,7 @@ function openPortfolioItems(group, row) {
     }
     const sort = document.createElement('select');
     sort.className = 'pf-items-sort';
-    for (const [value, text] of [['id-asc', 'Token # ↑'], ['id-desc', 'Token # ↓'], ['wallet', 'By wallet']]) {
+    for (const [value, text] of [['id-asc', 'Token # ↑'], ['id-desc', 'Token # ↓'], ['wallet', t('byWallet')]]) {
       const option = document.createElement('option');
       option.value = value;
       option.textContent = text;
@@ -1295,8 +1494,8 @@ function renderPortfolioTokens(tokens) {
   // page keeps its shape instead of the collections standing alone.
   if (!tokens.length) {
     list.innerHTML = portfolioTokenError
-      ? '<div class="empty-sub">Tokens could not be read from OpenSea. Refresh to try again.</div>'
-      : '<div class="empty-sub">No tokens in these wallets.</div>';
+      ? `<div class="empty-sub">${t('tokensError')}</div>`
+      : `<div class="empty-sub">${t('noTokens')}</div>`;
     return;
   }
 
@@ -1580,7 +1779,7 @@ function attachScrollTop(scroller) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'pf-scroll-top';
-  button.setAttribute('aria-label', 'Back to the top');
+  button.setAttribute('aria-label', t('backToTop'));
   button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"'
     + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
   button.addEventListener('click', () => scroller.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -1615,9 +1814,9 @@ async function openPortfolioHistory() {
   modal.className = 'modal pf-history-modal';
   modal.innerHTML = `
     <div class="modal-card pf-history-card">
-      <div class="modal-title">Price changes · last 24 hours</div>
-      <div class="pf-history-list" id="pf-history-list"><div class="empty-sub">Loading…</div></div>
-      <div class="modal-actions"><button class="btn" id="pf-history-close" type="button">Close</button></div>
+      <div class="modal-title">${t('historyTitle')}</div>
+      <div class="pf-history-list" id="pf-history-list"><div class="empty-sub">${t('loading')}</div></div>
+      <div class="modal-actions"><button class="btn" id="pf-history-close" type="button">${t('close')}</button></div>
     </div>`;
   document.body.appendChild(modal);
   const close = () => { modal.remove(); document.removeEventListener('keydown', onKey); };
@@ -1637,7 +1836,7 @@ async function openPortfolioHistory() {
   }
   list.textContent = '';
   if (!events.length) {
-    list.innerHTML = '<div class="empty-sub">No price changes in the last 24 hours.</div>';
+    list.innerHTML = `<div class="empty-sub">${t('noHistory')}</div>`;
     return;
   }
   const signed = (usd) => `${usd > 0 ? '+' : '−'}${formatUsd(Math.abs(usd))}`;
@@ -1712,18 +1911,17 @@ async function openManualNfts() {
   modal.className = 'modal pf-manual-modal';
   modal.innerHTML = `
     <div class="modal-card pf-manual-card">
-      <div class="modal-title">Add an NFT by hand</div>
-      <p class="pf-manual-note">For pieces OpenSea shows under none of your wallets, such as staked ones.
-        Paste the item's OpenSea link, or the collection's link and how many you hold.</p>
-      <label class="modal-field"><span>OpenSea link</span>
+      <div class="modal-title">${t('manualTitle')}</div>
+      <p class="pf-manual-note">${t('manualNote')}</p>
+      <label class="modal-field"><span>${t('openseaLink')}</span>
         <input id="pf-manual-link" type="text" placeholder="https://opensea.io/item/…" autocomplete="off"></label>
-      <label class="modal-field" id="pf-manual-qty-row" hidden><span>How many</span>
+      <label class="modal-field" id="pf-manual-qty-row" hidden><span>${t('howMany')}</span>
         <input id="pf-manual-qty" type="number" min="1" max="1000" value="1"></label>
-      <label class="modal-field"><span>Wallet</span><select id="pf-manual-owner"></select></label>
+      <label class="modal-field"><span>${t('wallet')}</span><select id="pf-manual-owner"></select></label>
       <p class="pf-manual-error" id="pf-manual-error"></p>
       <div class="modal-actions">
-        <button class="btn" id="pf-manual-cancel" type="button">Close</button>
-        <button class="btn btn-primary" id="pf-manual-save" type="button">Add</button>
+        <button class="btn" id="pf-manual-cancel" type="button">${t('close')}</button>
+        <button class="btn btn-primary" id="pf-manual-save" type="button">${t('add')}</button>
       </div>
       <div class="pf-manual-list" id="pf-manual-list"></div>
     </div>`;
@@ -1753,8 +1951,7 @@ async function openManualNfts() {
   if (!settingsState.apiKeySet) {
     const need = document.createElement('div');
     need.className = 'pf-manual-need';
-    need.innerHTML = 'Adding NFTs by hand needs an OpenSea API key. '
-      + '<button type="button" class="pf-manual-need-btn">Add it in settings</button>';
+    need.innerHTML = `${t('needKey')} <button type="button" class="pf-manual-need-btn">${t('addInSettings')}</button>`;
     need.querySelector('button').addEventListener('click', () => { close(); openSettings(false); });
     modal.querySelector('.pf-manual-note').after(need);
     save.disabled = true;
@@ -1770,7 +1967,7 @@ async function openManualNfts() {
   save.addEventListener('click', async () => {
     error.textContent = '';
     save.disabled = true;
-    save.textContent = 'Adding…';
+    save.textContent = t('adding');
     try {
       await api('/api/portfolio/manual', {
         method: 'POST',
@@ -1785,10 +1982,10 @@ async function openManualNfts() {
       await paintManualList(modal);
       loadPortfolio(true);
     } catch (err) {
-      error.textContent = err.message;
+      error.textContent = serverText(err.message);
     } finally {
       save.disabled = false;
-      save.textContent = 'Add';
+      save.textContent = t('add');
     }
   });
 
@@ -1810,7 +2007,7 @@ async function paintManualList(modal) {
   if (!entries.length) return;
   const head = document.createElement('div');
   head.className = 'pf-manual-head';
-  head.textContent = 'Added by hand';
+  head.textContent = t('addedByHand');
   box.appendChild(head);
   for (const entry of entries) {
     const row = document.createElement('div');
@@ -1882,17 +2079,17 @@ function paintPortfolioUpdated() {
   const label = $('#portfolio-updated');
   if (!label) return;
   if (portfolioItemsLoading) {
-    label.textContent = `Reading items… ${portfolioItemsLoading.toLocaleString('en-US')}`;
+    label.textContent = t('readingItems', { n: portfolioItemsLoading.toLocaleString('en-US') });
     return;
   }
   if (portfolioUpdating) {
-    label.textContent = portfolioFetchedAt ? 'Updating…' : 'Loading…';
+    label.textContent = portfolioFetchedAt ? t('updating') : t('loading');
     return;
   }
   if (!portfolioFetchedAt) { label.textContent = ''; return; }
   const seconds = Math.max(0, Math.floor((Date.now() - portfolioFetchedAt) / 1000));
-  const age = seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m`;
-  label.innerHTML = `Updated <b>${age}</b> ago <i>· every ${PORTFOLIO_REFRESH_MS / 60000}m</i>`;
+  const age = seconds < 60 ? t('ageSec', { n: seconds }) : t('ageMin', { n: Math.floor(seconds / 60) });
+  label.innerHTML = t('updatedAgo', { age, m: PORTFOLIO_REFRESH_MS / 60000 });
 }
 
 setInterval(() => { if (portfolioIsOnScreen()) paintPortfolioUpdated(); }, 1000);
@@ -1959,8 +2156,8 @@ function paintUpdateNote() {
   const behind = Number(settingsState.updateBehind) || 0;
   const applied = settingsState.lastUpdate && (settingsState.lastUpdate.changes || []).length;
   note.classList.toggle('is-applied', !behind && Boolean(applied));
-  if (behind) note.textContent = 'Update available · what’s new';
-  else if (applied) note.textContent = 'Updated · what’s new';
+  if (behind) note.textContent = t('noteAvailable');
+  else if (applied) note.textContent = t('noteApplied');
   note.hidden = !behind && !applied;
 }
 
@@ -1974,7 +2171,7 @@ function openWhatsNew() {
   card.className = 'modal-card whatsnew-card';
   const title = document.createElement('div');
   title.className = 'modal-title';
-  title.textContent = behind ? 'A new version is available' : 'Updated to the latest version';
+  title.textContent = behind ? t('newVersion') : t('updatedLatest');
   const list = document.createElement('ul');
   list.className = 'whatsnew-list';
   for (const change of changes) {
@@ -1986,28 +2183,28 @@ function openWhatsNew() {
   how.className = 'whatsnew-how';
   if (behind) {
     how.textContent = settingsState.canSelfUpdate
-      ? 'Takes a few seconds: the app updates, restarts and this page reloads. Your wallets and history are kept.'
-      : 'To apply it, restart the app: stop and reopen the codespace, or press Ctrl+C in its terminal and run npm start. Your wallets and history are kept.';
+      ? t('howSelf')
+      : t('howManual');
   }
   const actions = document.createElement('div');
   actions.className = 'modal-actions';
   const done = document.createElement('button');
   done.type = 'button';
   done.className = 'btn';
-  done.textContent = 'Close';
+  done.textContent = t('close');
   actions.appendChild(done);
   // One click: the app pulls the update, restarts, and the page reloads.
   if (behind && settingsState.canSelfUpdate) {
     const now = document.createElement('button');
     now.type = 'button';
     now.className = 'btn btn-primary';
-    now.textContent = 'Update now';
+    now.textContent = t('updateNow');
     now.addEventListener('click', () => {
       now.disabled = true;
       done.disabled = true;
-      now.textContent = 'Updating…';
+      now.textContent = t('updating');
       applyUpdate().catch((error) => {
-        now.textContent = 'Update now';
+        now.textContent = t('updateNow');
         now.disabled = false;
         done.disabled = false;
         how.textContent = error.message;
@@ -2057,7 +2254,7 @@ async function applyUpdate() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
-  throw new Error('The app did not come back. Check its terminal, or run npm start.');
+  throw new Error(t('noComeBack'));
 }
 
 /*
@@ -2083,19 +2280,19 @@ $('#update-check').addEventListener('click', async (event) => {
   const label = button.querySelector('span');
   if (button.disabled) return;
   button.disabled = true;
-  label.textContent = 'Checking…';
+  label.textContent = t('checking');
   let answer = null;
   try { answer = await api('/api/update/check', { method: 'POST' }); } catch { /* shown below */ }
-  if (!answer || !answer.known) label.textContent = 'Could not check';
-  else if (answer.behind > 0) label.textContent = 'Update available';
-  else label.textContent = 'Up to date';
+  if (!answer || !answer.known) label.textContent = t('couldNotCheck');
+  else if (answer.behind > 0) label.textContent = t('updateAvailable');
+  else label.textContent = t('upToDate');
   if (answer && answer.known) {
     settingsState.updateBehind = answer.behind;
     settingsState.updateChanges = answer.changes || [];
     paintUpdateNote();
   }
   setTimeout(() => {
-    label.textContent = 'Check for updates';
+    label.textContent = t('checkUpdates');
     button.disabled = false;
   }, 4000);
 });
@@ -2120,5 +2317,5 @@ loadSettings()
     else loadPortfolio();
   })
   .catch((error) => {
-    $('#portfolio-summary').textContent = `Could not reach the local server: ${error.message}`;
+    $('#portfolio-summary').textContent = t('serverDown', { e: error.message });
   });
