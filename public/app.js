@@ -601,6 +601,9 @@ function renderPortfolioCards() {
       : '<div class="empty-sub">No items visible in these wallets.</div>';
     return;
   }
+  // Emptying the list resets its scroll; a refresh must leave the reader
+  // where they were, not throw them back to the top.
+  const keptScroll = rows.scrollTop;
   rows.textContent = '';
   tableWindow.groups = groups;
   tableWindow.drawn = new Map();
@@ -609,6 +612,10 @@ function renderPortfolioCards() {
   tableWindow.bottom = document.createElement('div');
   tableWindow.top.className = tableWindow.bottom.className = 'pf-spacer';
   rows.append(tableWindow.top, tableWindow.bottom);
+  // The spacers first give the list its full height, so the old position
+  // exists again before it is restored.
+  tableWindow.bottom.style.height = `${groups.length * tableWindow.rowHeight}px`;
+  rows.scrollTop = keptScroll;
   paintTableWindow(true);
 }
 
@@ -726,7 +733,8 @@ function openPortfolioItems(group, row) {
     return at < 0 ? portfolioWalletList.length : at;
   };
   const byWallet = [...group.items].sort((a, b) => walletOrder(a.owner) - walletOrder(b.owner));
-  byWallet.forEach((item, index) => {
+
+  const pieceCell = (item, index) => {
     const cell = document.createElement(itemPageUrl(item, group) ? 'a' : 'div');
     cell.className = 'pf-item-cell';
     if (cell.tagName === 'A') {
@@ -764,14 +772,116 @@ function openPortfolioItems(group, row) {
     cell.append(pic, text);
     /*
      * Its place in the list, in the top-right corner: scrolled to the end,
-     * the last number is the count held -- every piece is here.
+     * the last number is the count shown -- every piece is here.
      */
     const place = document.createElement('span');
     place.className = 'pf-item-index';
     place.textContent = String(index + 1);
     cell.appendChild(place);
-    grid.appendChild(cell);
-  });
+    return cell;
+  };
+
+  /*
+   * Search and filters over the pieces: a name or token number, which
+   * wallet, hand-added only, and the order. Shown for a collection with more
+   * than a handful of pieces; the wallet and Manual choices only when there
+   * is something to choose between.
+   */
+  const view = { query: '', wallet: '', manual: false, sort: 'wallet' };
+  const owners = [...new Set(byWallet.map((item) => item.owner).filter(Boolean))];
+  const hasManual = byWallet.some((item) => item.manual);
+  const tokenOrder = (a, b) => {
+    const x = String(a.tokenId || '');
+    const y = String(b.tokenId || '');
+    return x.length - y.length || (x < y ? -1 : x > y ? 1 : 0);
+  };
+
+  let count = null;
+  const drawPieces = () => {
+    const query = view.query.trim().toLowerCase().replace(/^#/, '');
+    let shown = byWallet.filter((item) => {
+      if (view.wallet && item.owner !== view.wallet) return false;
+      if (view.manual && !item.manual) return false;
+      if (!query) return true;
+      return String(item.name || '').toLowerCase().includes(query) || String(item.tokenId || '') === query
+        || String(item.tokenId || '').startsWith(query);
+    });
+    if (view.sort === 'id-asc') shown = [...shown].sort(tokenOrder);
+    if (view.sort === 'id-desc') shown = [...shown].sort((a, b) => tokenOrder(b, a));
+    forgetPictures(grid);
+    grid.textContent = '';
+    shown.forEach((item, index) => grid.appendChild(pieceCell(item, index)));
+    if (!shown.length) {
+      const none = document.createElement('div');
+      none.className = 'pf-items-none';
+      none.textContent = 'No pieces match.';
+      grid.appendChild(none);
+    }
+    if (count) {
+      count.textContent = shown.length === byWallet.length
+        ? `${byWallet.length}`
+        : `${shown.length} of ${byWallet.length}`;
+    }
+  };
+
+  let tools = null;
+  if (byWallet.length > 6) {
+    tools = document.createElement('div');
+    tools.className = 'pf-items-tools';
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.className = 'pf-items-search';
+    search.placeholder = 'Search name or #';
+    search.autocomplete = 'off';
+    search.spellcheck = false;
+    search.addEventListener('input', () => { view.query = search.value; drawPieces(); });
+    tools.appendChild(search);
+
+    const chip = (text, active, onPick, extraClass = '') => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `pf-items-chip ${extraClass}`.trim();
+      button.textContent = text;
+      button.classList.toggle('is-on', active);
+      button.addEventListener('click', () => { onPick(button); drawPieces(); });
+      return button;
+    };
+    if (owners.length > 1) {
+      const wallets = document.createElement('div');
+      wallets.className = 'pf-items-chips';
+      const pick = (address) => (button) => {
+        view.wallet = address;
+        wallets.querySelectorAll('.pf-items-chip').forEach((b) => b.classList.toggle('is-on', b === button));
+      };
+      wallets.appendChild(chip('All', true, pick('')));
+      for (const address of owners) {
+        const name = walletLabelMap[address.toLowerCase()] || `${address.slice(0, 6)}…${address.slice(-4)}`;
+        wallets.appendChild(chip(name, false, pick(address)));
+      }
+      tools.appendChild(wallets);
+    }
+    if (hasManual) {
+      tools.appendChild(chip('Manual', false, (button) => {
+        view.manual = !view.manual;
+        button.classList.toggle('is-on', view.manual);
+      }, 'is-manual'));
+    }
+    const sort = document.createElement('select');
+    sort.className = 'pf-items-sort';
+    for (const [value, text] of [['wallet', 'By wallet'], ['id-asc', 'Token # ↑'], ['id-desc', 'Token # ↓']]) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = text;
+      sort.appendChild(option);
+    }
+    sort.addEventListener('change', () => { view.sort = sort.value; drawPieces(); });
+    tools.appendChild(sort);
+    count = document.createElement('span');
+    count.className = 'pf-items-count';
+    tools.appendChild(count);
+    card.appendChild(tools);
+  }
+  drawPieces();
 
   card.append(grid);
   /*
