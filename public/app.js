@@ -382,7 +382,8 @@ async function loadPortfolio(force) {
   const summary = $('#portfolio-summary');
   const walletBox = $('#portfolio-wallets');
 
-  if (!$('#portfolio-cards').children.length) summary.textContent = 'Loading…';
+  // Loading shows in the counter pill; this line is for errors only.
+  summary.textContent = '';
 
   let data;
   portfolioUpdating = true;
@@ -1556,7 +1557,7 @@ function paintPortfolioUpdated() {
   const label = $('#portfolio-updated');
   if (!label) return;
   if (portfolioUpdating) {
-    label.textContent = portfolioFetchedAt ? 'Updating…' : '';
+    label.textContent = portfolioFetchedAt ? 'Updating…' : 'Loading…';
     return;
   }
   if (!portfolioFetchedAt) { label.textContent = ''; return; }

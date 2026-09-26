@@ -47,9 +47,6 @@
               <b id="portfolio-token" class="pf-stat-value">—</b>
             </div>
           </div>
-          <!-- Only for loading and errors: the counts it used to show were a
-               line nobody read. -->
-          <span id="portfolio-summary" class="pf-summary"></span>
           <!-- The controls as a fourth card beside the three figures: how old
                they are on top, what to show and do with them underneath. -->
           <div class="pf-stat pf-controls">
@@ -92,6 +89,8 @@
           </div>
           </div>
         </div>
+        <!-- Only for errors: a line under the header, not squeezed into it. -->
+        <div id="portfolio-summary" class="pf-summary pf-error-line"></div>
         <div id="portfolio-filter-note" class="portfolio-filter-note"></div>
 
         <!-- OpenSea's own portfolio layout: the collections as a table that
