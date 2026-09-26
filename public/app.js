@@ -872,7 +872,7 @@ function renderPortfolioCards() {
  * scroll position are those of the whole table, and rows already drawn are
  * kept while they stay in range, so scrolling only adds and drops the edges.
  */
-const tableWindow = { groups: [], drawn: new Map(), first: -1, top: null, bottom: null, rowHeight: 56 };
+const tableWindow = { groups: [], drawn: new Map(), first: -1, last: -1, top: null, bottom: null, rowHeight: 56 };
 const TABLE_BUFFER = 12;
 
 function paintTableWindow(force = false) {
@@ -880,17 +880,19 @@ function paintTableWindow(force = false) {
   if (!rows || !tableWindow.top || !tableWindow.top.isConnected) return;
   const { groups } = tableWindow;
   const height = tableWindow.rowHeight;
-  const first = Math.max(0, Math.floor(rows.scrollTop / height) - TABLE_BUFFER);
-  const last = Math.min(groups.length, Math.ceil((rows.scrollTop + rows.clientHeight) / height) + TABLE_BUFFER);
+  const shownFirst = Math.floor(rows.scrollTop / height);
+  const shownLast = Math.ceil((rows.scrollTop + rows.clientHeight) / height);
+  const first = Math.max(0, shownFirst - TABLE_BUFFER);
+  const last = Math.min(groups.length, shownLast + TABLE_BUFFER);
   /*
-   * Small scrolls inside the buffer change nothing -- unless the window has
-   * reached an end of the table. There the clamped start barely moves, and
-   * skipping it left the rows above unpainted: a blank band at the top.
+   * Nothing to do while the rows drawn still cover what is on screen with
+   * half the buffer to spare. Judged by that, not by how far the start
+   * moved: a table first drawn while hidden (no height yet) or near either
+   * end moves its start little or not at all, and was left half blank.
    */
-  const reachedEnd = (first === 0 && tableWindow.first !== 0)
-    || (last === groups.length && tableWindow.last !== groups.length);
-  if (!force && tableWindow.drawn.size && !reachedEnd
-    && Math.abs(first - tableWindow.first) < TABLE_BUFFER / 2) return;
+  const covered = tableWindow.first <= Math.max(0, shownFirst - TABLE_BUFFER / 2)
+    && tableWindow.last >= Math.min(groups.length, shownLast + TABLE_BUFFER / 2);
+  if (!force && tableWindow.drawn.size && covered) return;
   tableWindow.first = first;
   tableWindow.last = last;
 
