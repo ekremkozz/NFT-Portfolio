@@ -485,7 +485,7 @@ async function loadPortfolio(force) {
    */
   portfolioItemsLoading = data.loading ? (data.loaded || 0) : 0;
   clearTimeout(portfolioLoadingTimer);
-  if (data.loading) portfolioLoadingTimer = setTimeout(() => loadPortfolio(true), 2500);
+  if (data.loading) portfolioLoadingTimer = setTimeout(() => loadPortfolio(true), 5000);
 
   /*
    * Tokens that could not be read this time: the last list stays rather than
@@ -494,8 +494,32 @@ async function loadPortfolio(force) {
   portfolioTokenError = data.tokenError || '';
   if (!portfolioTokenError || !portfolioTokens.length) portfolioTokens = data.tokens || [];
   notePortfolioMove(data.move);
-  renderPortfolioView();
+  /*
+   * While a long list is read the page asks every five seconds. Rebuilding
+   * both tables each time was the page's heaviest work, so a read that
+   * brought nothing new draws nothing, and the token table -- which the item
+   * read does not change -- is drawn only when its own figures move.
+   */
+  // Counts and value both: a refresh where only prices moved must still draw.
+  const itemsValue = portfolioGroups.reduce((sum, g) => sum + (g.valueUsd || 0) + (g.floorUsd || 0), 0);
+  const itemsSig = `${data.itemCount}|${portfolioGroups.length}|${Math.round(itemsValue * 100)}`;
+  const tokensSig = `${portfolioTokens.length}|${Math.round((data.tokenTotalUsd || 0) * 100)}`;
+  if (itemsSig === portfolioDrawn.items && tokensSig === portfolioDrawn.tokens) {
+    renderPortfolioTotals();
+    return;
+  }
+  if (data.loading && tokensSig === portfolioDrawn.tokens) {
+    renderPortfolioCards();
+    renderPortfolioTotals();
+    syncPortfolioChips();
+    fitPortfolioTables();
+  } else {
+    renderPortfolioView();
+  }
+  portfolioDrawn = { items: itemsSig, tokens: tokensSig };
 }
+
+let portfolioDrawn = { items: '', tokens: '' };
 
 /** Cards, tokens and the headline always move together. */
 function renderPortfolioView() {
@@ -544,6 +568,7 @@ function renderPortfolioCards() {
   const valueOf = PORTFOLIO_SORT_VALUE[portfolioSort.key] || PORTFOLIO_SORT_VALUE.value;
   const groups = [...filteredPortfolioGroups()]
     .sort((a, b) => portfolioSort.dir * (valueOf(a) - valueOf(b)));
+  forgetPictures(rows);
   if (!groups.length) {
     rows.innerHTML = portfolioFilter.size
       ? '<div class="empty-sub">No items visible in the selected wallets.</div>'
@@ -580,7 +605,9 @@ function attachPortfolioItems(row, group) {
 }
 
 function openPortfolioItems(group, row) {
-  document.querySelector('.pf-items-modal')?.remove();
+  const previous = document.querySelector('.pf-items-modal');
+  forgetPictures(previous);
+  previous?.remove();
   // A row half out of the table's view is brought in, so its lit copy shows.
   row.scrollIntoView({ block: 'nearest' });
   const modal = document.createElement('div');
@@ -757,6 +784,7 @@ function openPortfolioItems(group, row) {
   window.addEventListener('resize', place);
 
   const close = () => {
+    forgetPictures(modal);
     modal.remove();
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', place);
@@ -1041,6 +1069,7 @@ function openTokenPage(part) {
 
 function renderPortfolioTokens(tokens) {
   const list = $('#portfolio-tokens');
+  forgetPictures(list);
   list.textContent = '';
   // The panel stays, headings and all, while loading and when empty: the
   // page keeps its shape instead of the collections standing alone.
@@ -1206,25 +1235,81 @@ function canFreeze(url) {
   }
 }
 
+/*
+ * Pictures load only when they come near the screen. A large wallet has
+ * hundreds of collection rows and a pop-up can hold hundreds of pieces;
+ * drawing every picture up front, on screen or not, was most of the page's
+ * memory and its biggest bursts of work. The observer watches each picture
+ * and starts it a little before it scrolls into view.
+ *
+ * A picture already drawn once is kept, decoded, and drawn again at once
+ * when the tables are rebuilt -- no second download, no second decode.
+ */
+const pictureLoaders = new WeakMap();
+const pictureWatch = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue;
+    pictureWatch.unobserve(entry.target);
+    const load = pictureLoaders.get(entry.target);
+    pictureLoaders.delete(entry.target);
+    if (load) load();
+  }
+}, { rootMargin: '300px' });
+
+const pictureCache = new Map();
+const PICTURE_CACHE_MAX = 600;
+
+function rememberPicture(key, bitmap) {
+  if (pictureCache.size >= PICTURE_CACHE_MAX) {
+    const oldest = pictureCache.keys().next().value;
+    pictureCache.get(oldest)?.close?.();
+    pictureCache.delete(oldest);
+  }
+  pictureCache.set(key, bitmap);
+}
+
+/* Pictures inside something being thrown away stop being watched. */
+function forgetPictures(root) {
+  if (!root) return;
+  for (const canvas of root.querySelectorAll('canvas')) {
+    if (!pictureLoaders.has(canvas)) continue;
+    pictureWatch.unobserve(canvas);
+    pictureLoaders.delete(canvas);
+  }
+}
+
 function stillImage(url, size, className) {
   if (!canFreeze(url)) return plainImage(url, size, className);
   const holder = document.createElement('canvas');
   holder.className = className;
   holder.width = size * 2;
   holder.height = size * 2;
+  const key = `${url}|${size}`;
 
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.referrerPolicy = 'no-referrer';
-  img.onload = () => {
-    try {
-      holder.getContext('2d').drawImage(img, 0, 0, holder.width, holder.height);
-    } catch {
-      holder.replaceWith(plainImage(url, size, className));
-    }
-  };
-  img.onerror = () => holder.replaceWith(plainImage(url, size, className));
-  img.src = sizedImageUrl(url, size * 2);
+  const cached = pictureCache.get(key);
+  if (cached) {
+    holder.getContext('2d').drawImage(cached, 0, 0, holder.width, holder.height);
+    return holder;
+  }
+
+  pictureLoaders.set(holder, () => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
+    img.onload = () => {
+      try {
+        holder.getContext('2d').drawImage(img, 0, 0, holder.width, holder.height);
+        if (window.createImageBitmap) {
+          createImageBitmap(holder).then((bitmap) => rememberPicture(key, bitmap)).catch(() => {});
+        }
+      } catch {
+        holder.replaceWith(plainImage(url, size, className));
+      }
+    };
+    img.onerror = () => holder.replaceWith(plainImage(url, size, className));
+    img.src = sizedImageUrl(url, size * 2);
+  });
+  pictureWatch.observe(holder);
   return holder;
 }
 

@@ -60,6 +60,10 @@ Everything the app keeps — your wallet list, NFTs added by hand, the last 24 h
 
 ---
 
+## Comparing it with OpenSea's page yourself
+
+[`tools/page-meter.user.js`](tools/page-meter.user.js) is a small [Tampermonkey](https://www.tampermonkey.net/) script that shows the same measurements on both pages: how busy the page keeps the browser, its memory, how many elements it holds and what it downloaded. Install it, open both pages with the same wallet, and compare them at the same moments — while loading, at rest, and after opening a detail. For CPU, the browser's own task manager (Shift+Esc in Chrome and Brave) is the authority; the script explains in its header what it can and cannot see.
+
 ## Important
 
 **Not affiliated with OpenSea.** It reads the same data OpenSea's own website reads. Those are not a published API: OpenSea can change them at any time, and when it does this app may show empty tables until it is updated. Values are OpenSea's figures (top offers and floors), not financial advice.
