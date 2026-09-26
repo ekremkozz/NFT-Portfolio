@@ -582,3 +582,11 @@ select:-webkit-autofill {
   color: var(--text); text-decoration: underline; cursor: pointer;
 }
 .pf-manual-card .btn:disabled, .pf-manual-card input:disabled { opacity: .45; cursor: not-allowed; }
+
+/* One spacing everywhere on the portfolio: the card's edge, between the
+   figure cards, between them and the controls, and between the two tables.
+   They were 19, 10, 18 and 18 px, and read as uneven. */
+section.tab[data-tab="portfolio"] > .card { --pf-gap: 12px; padding: var(--pf-gap); }
+section.tab[data-tab="portfolio"] .pf-top { gap: var(--pf-gap); margin-bottom: var(--pf-gap); }
+section.tab[data-tab="portfolio"] .pf-stats { gap: var(--pf-gap); }
+section.tab[data-tab="portfolio"] .pf-layout { gap: var(--pf-gap); }
