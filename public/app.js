@@ -431,6 +431,8 @@ async function loadPortfolio(force) {
    */
   portfolioGroups = data.collections || [];
   portfolioWalletList = data.wallets || [];
+  // One wallet: the Wallets columns have nothing to say and are hidden.
+  document.body.classList.toggle('single-wallet', portfolioWalletList.length <= 1);
   // A wallet that vanished between refreshes cannot stay selected.
   const present = new Set((data.wallets || []).map((a) => a.toLowerCase()));
   for (const address of [...portfolioFilter]) {
@@ -778,7 +780,8 @@ function openPortfolioItems(group, row) {
     text.appendChild(label);
     const tags = document.createElement('span');
     tags.className = 'pf-item-tags';
-    if (item.owner) tags.appendChild(walletPill(item.owner));
+    // Which wallet, only when there is more than one to tell apart.
+    if (item.owner && portfolioWalletList.length > 1) tags.appendChild(walletPill(item.owner));
     if (item.manual) {
       const tag = document.createElement('span');
       tag.className = 'pf-item-tag is-manual';
