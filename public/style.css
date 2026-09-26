@@ -648,3 +648,11 @@ button.update-note.is-applied:hover { background: rgba(52, 199, 123, .18); }
 }
 .pf-items-count { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
 .pf-items-none { grid-column: 1 / -1; padding: 18px 4px; color: var(--muted); font-size: 13px; }
+
+/* ------------------------------------------------------------- page size
+   Drawn 10% larger than the browser's zoom: at 100% the page reads as the
+   panel does at 110%. Viewport units grow with it, so the full-height shell
+   divides the zoom back out. (Positions measured in app.js do the same.) */
+:root { --page-zoom: 1.1; }
+body { zoom: var(--page-zoom); }
+.shell { min-height: calc(100vh / var(--page-zoom)); }

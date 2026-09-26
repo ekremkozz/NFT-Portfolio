@@ -11,6 +11,23 @@
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+/*
+ * The page is drawn 10% larger than the browser's own zoom (body { zoom: 1.1 }
+ * in style.css), so that at 100% it reads as the panel does at 110%. Under
+ * CSS zoom the browser measures in enlarged pixels -- getBoundingClientRect,
+ * innerWidth -- while positions are set in the page's own. Every measurement
+ * used to place something goes through these, which divide the zoom back out.
+ */
+const pageZoom = () => document.body.currentCSSZoom || parseFloat(getComputedStyle(document.body).zoom) || 1;
+
+function pageRect(el) {
+  const r = el.getBoundingClientRect();
+  const z = pageZoom();
+  return { left: r.left / z, top: r.top / z, right: r.right / z, bottom: r.bottom / z, width: r.width / z, height: r.height / z };
+}
+const viewWidth = () => window.innerWidth / pageZoom();
+const viewHeight = () => window.innerHeight / pageZoom();
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     ...options,
@@ -97,17 +114,17 @@ function tipParts(host, text) {
 }
 
 function placeTip(host, pointer) {
-  const box = host.getBoundingClientRect();
-  const tip = tipEl.getBoundingClientRect();
+  const box = pageRect(host);
+  const tip = pageRect(tipEl);
   const margin = 8;
   const huge = box.width > 420 || box.height > 140;
   const anchor = huge && pointer
     ? { left: pointer.x, top: pointer.y, bottom: pointer.y + 18 }
     : { left: box.left, top: box.top, bottom: box.bottom };
-  let left = Math.max(margin, Math.min(anchor.left, window.innerWidth - tip.width - margin));
+  let left = Math.max(margin, Math.min(anchor.left, viewWidth() - tip.width - margin));
   let top = anchor.bottom + 7;
-  if (top + tip.height > window.innerHeight - margin) top = anchor.top - tip.height - 7;
-  top = Math.max(margin, Math.min(top, window.innerHeight - tip.height - margin));
+  if (top + tip.height > viewHeight() - margin) top = anchor.top - tip.height - 7;
+  top = Math.max(margin, Math.min(top, viewHeight() - tip.height - margin));
   tipEl.style.left = `${Math.round(left)}px`;
   tipEl.style.top = `${Math.round(top)}px`;
 }
@@ -148,7 +165,7 @@ document.addEventListener('mouseover', (event) => {
   if (!host.dataset.tip) return;
   hideTip();
   tipHost = host;
-  const pointer = { x: event.clientX, y: event.clientY };
+  const pointer = { x: event.clientX / pageZoom(), y: event.clientY / pageZoom() };
   tipTimer = setTimeout(() => showTip(host, pointer), 180);
 }, true);
 
@@ -670,7 +687,7 @@ function paintTableWindow(force = false) {
   // a zoomed page or a changed style would otherwise misplace the window.
   const sample = keep.values().next().value;
   if (sample) {
-    const measured = sample.getBoundingClientRect().height;
+    const measured = pageRect(sample).height;
     if (measured && Math.abs(measured - height) > 0.5) {
       tableWindow.rowHeight = measured;
       paintTableWindow(true);
@@ -937,7 +954,7 @@ function openPortfolioItems(group, row) {
    * row's left edge, under the picture and name it belongs to.
    */
   const place = () => {
-    const line = row.getBoundingClientRect();
+    const line = pageRect(row);
     // As many 210px panels to a line as the row is wide (less the card's
     // padding and border), never more than are held.
     const fit = Math.max(1, Math.floor((line.width - 26 + 6) / 216));
@@ -960,18 +977,18 @@ function openPortfolioItems(group, row) {
      * at the row put the pieces above the headings for rows low in the table;
      * this way they always read top to bottom.
      */
-    const headHeight = heading ? heading.getBoundingClientRect().height : 0;
+    const headHeight = heading ? pageRect(heading).height : 0;
     const edge = parseFloat(unit.style.borderLeftWidth) || 0;
     const radius = unit.dataset.radius || (unit.dataset.radius = unit.style.borderRadius || '14px');
     const unitHeight = headHeight + line.height + edge * 2;
-    const area = (table || row).getBoundingClientRect();
+    const area = pageRect((table || row));
     const margin = 12;
     // The pieces scroll inside rather than push the panel past the table.
-    card.style.maxHeight = `${Math.max(120, Math.min(area.height, window.innerHeight - margin * 2) - unitHeight + edge)}px`;
+    card.style.maxHeight = `${Math.max(120, Math.min(area.height, viewHeight() - margin * 2) - unitHeight + edge)}px`;
     // As wide as the table's own panel, edge to edge, not just its rows.
     card.style.width = full ? `${area.width}px` : '';
     const total = unitHeight - edge + card.offsetHeight;
-    const unitTop = Math.max(margin, Math.min(area.top + (area.height - total) / 2, window.innerHeight - margin - total));
+    const unitTop = Math.max(margin, Math.min(area.top + (area.height - total) / 2, viewHeight() - margin - total));
 
     const inset = line.left - area.left - edge;
     Object.assign(unit.style, {
@@ -1549,14 +1566,14 @@ function fitPortfolioTables() {
   // never scrolls and no strip of empty window is left either.
   // Measured from fixed parts, not from the page's end: the page stretches
   // to the window, so its end moves with the tables and the sum ran away.
-  const box = layout.getBoundingClientRect();
+  const box = pageRect(layout);
   const card = layout.closest('.card');
   const main = layout.closest('main');
   const foot = document.querySelector('.lite-foot');
   const px = (el, prop) => (el ? parseFloat(getComputedStyle(el)[prop]) || 0 : 0);
-  const under = (card ? card.getBoundingClientRect().bottom - box.bottom : 0)
+  const under = (card ? pageRect(card).bottom - box.bottom : 0)
     + px(card, 'marginBottom') + px(main, 'paddingBottom') + (foot ? foot.offsetHeight : 0);
-  const height = Math.max(320, Math.round(window.innerHeight - box.top - under));
+  const height = Math.max(320, Math.round(viewHeight() - box.top - under));
   layout.style.setProperty('--pf-h', `${height}px`);
 }
 window.addEventListener('resize', fitPortfolioTables);
