@@ -1348,6 +1348,14 @@ function portfolioRow(group) {
   }
   ident.appendChild(link);
   if (group.verified) ident.appendChild(verifiedBadge());
+  // How many are held, beside the name rather than in a column of its own:
+  // one more column of bare numbers made the money hard to pick out.
+  if (group.held > 1) {
+    const held = document.createElement('span');
+    held.className = 'pf-held';
+    held.textContent = `×${group.held}`;
+    ident.appendChild(held);
+  }
 
   // The network, as its mark alone.
   const chain = document.createElement('div');
@@ -1355,10 +1363,6 @@ function portfolioRow(group) {
   if (group.chain) {
     chain.innerHTML = netMark(group.chain);
   }
-
-  const held = document.createElement('div');
-  held.className = 'pf-num';
-  held.textContent = String(group.held);
 
   const wallets = document.createElement('div');
   wallets.className = 'pf-wallets-col';
@@ -1381,7 +1385,25 @@ function portfolioRow(group) {
   const value = money(group.valueUsd);
   value.classList.add('is-value');
 
-  row.append(name, chain, held, wallets, value, money(group.floorUsd), money(group.offerUsd));
+  /*
+   * Floor and top offer in one cell: the floor, and under it the offer with
+   * what share of the floor it is -- an offer far under the floor (below
+   * 75%) is marked, since selling into it loses the difference.
+   */
+  const market = money(group.floorUsd);
+  market.classList.add('pf-market');
+  const offer = document.createElement('div');
+  offer.className = 'pf-offer';
+  if (group.offerUsd) {
+    const share = group.floorUsd ? Math.round((group.offerUsd / group.floorUsd) * 100) : 0;
+    offer.textContent = share ? `${formatUsd(group.offerUsd)} · ${share}%` : formatUsd(group.offerUsd);
+    offer.classList.toggle('is-low', Boolean(share) && share < 75);
+  } else {
+    offer.textContent = '—';
+  }
+  market.appendChild(offer);
+
+  row.append(name, chain, wallets, value, market);
   return row;
 }
 
