@@ -804,7 +804,8 @@ function openPortfolioItems(group, row) {
    * than a handful of pieces; the wallet and Manual choices only when there
    * is something to choose between.
    */
-  const view = { query: '', wallet: '', manual: false, sort: 'wallet' };
+  // Token number, low to high, unless another order is picked.
+  const view = { query: '', wallet: '', manual: false, sort: 'id-asc' };
   const owners = [...new Set(byWallet.map((item) => item.owner).filter(Boolean))];
   const hasManual = byWallet.some((item) => item.manual);
   const tokenOrder = (a, b) => {
@@ -879,7 +880,7 @@ function openPortfolioItems(group, row) {
     }
     const sort = document.createElement('select');
     sort.className = 'pf-items-sort';
-    for (const [value, text] of [['wallet', 'By wallet'], ['id-asc', 'Token # ↑'], ['id-desc', 'Token # ↓']]) {
+    for (const [value, text] of [['id-asc', 'Token # ↑'], ['id-desc', 'Token # ↓'], ['wallet', 'By wallet']]) {
       const option = document.createElement('option');
       option.value = value;
       option.textContent = text;
