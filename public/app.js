@@ -27,7 +27,8 @@ function formatUsd(value) {
   if (value === 0) return '$0';
   if (value < 0.01) return '<$0.01';
   if (value < 1) return '$' + value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
-  return '$' + value.toFixed(2);
+  // Thousands grouped: $53,110.98, not $53110.98.
+  return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /* The short names given to wallets in the settings, by address. */
@@ -249,7 +250,6 @@ function openSettings(firstRun = false) {
       await api('/api/settings', { method: 'POST', body: JSON.stringify(body) });
       await loadSettings();
       close();
-      portfolioPages = 4;
       loadPortfolio(true);
     } catch (err) {
       error.textContent = err.message;
@@ -265,22 +265,14 @@ function openSettings(firstRun = false) {
  * render a grid and then labours over it. The numbers behind that grid are two
  * plain reads, and a table of them costs nothing to draw.
  *
- * Floor price is what the total is built from, so read it as "what this would
- * fetch at each collection's floor" — not an appraisal. Items whose collection
- * has no floor contribute zero rather than being guessed at.
+ * Value is counted at each collection's top offer -- what someone will pay
+ * now -- the way OpenSea values holdings; a collection without an offer
+ * counts as zero rather than being guessed at.
  */
 let portfolioLoaded = false;
-/*
- * Four pages of fifty. Each page is its own round trip, so pulling everything
- * up front would make opening the tab a ten-second wait for a number most of
- * which is in the first rows anyway. More is one button away.
- */
-let portfolioPages = 4;
-let portfolioTruncated = false;
 let portfolioTokenError = '';
 // The wallets the portfolio was read for; the first is the main one.
 let portfolioWalletList = [];
-let portfolioLoadingMore = false;
 
 /*
  * Which wallets the portfolio is being read through. Lowercased, because an
@@ -389,7 +381,7 @@ async function loadPortfolio(force) {
   portfolioUpdating = true;
   paintPortfolioUpdated();
   try {
-    data = await api(`/api/portfolio?pages=${portfolioPages}`);
+    data = await api('/api/portfolio');
   } catch (error) {
     summary.textContent = 'Could not fetch: ' + error.message;
     return;
@@ -487,8 +479,13 @@ async function loadPortfolio(force) {
   summary.textContent = '';
 
   // More behind this page: the table fetches it when scrolled to its end.
-  portfolioTruncated = Boolean(data.truncated);
-  portfolioLoadingMore = false;
+  /*
+   * The server is still reading a long item list: say how far it has got in
+   * the counter, and ask again shortly -- the counts grow until it is done.
+   */
+  portfolioItemsLoading = data.loading ? (data.loaded || 0) : 0;
+  clearTimeout(portfolioLoadingTimer);
+  if (data.loading) portfolioLoadingTimer = setTimeout(() => loadPortfolio(true), 2500);
 
   /*
    * Tokens that could not be read this time: the last list stays rather than
@@ -1283,10 +1280,7 @@ attachScrollTop($('#portfolio-cards'));
 attachScrollTop($('#portfolio-tokens'));
 
 
-$('#portfolio-refresh').addEventListener('click', () => {
-  portfolioPages = 4;
-  loadPortfolio(true);
-});
+$('#portfolio-refresh').addEventListener('click', () => loadPortfolio(true));
 
 /*
  * NFTs added by hand: staked, lent, or held by some other contract, so
@@ -1552,10 +1546,16 @@ setInterval(() => {
  * ticking while the tab is open. A reload in flight says so instead.
  */
 let portfolioUpdating = false;
+let portfolioItemsLoading = 0;
+let portfolioLoadingTimer = null;
 
 function paintPortfolioUpdated() {
   const label = $('#portfolio-updated');
   if (!label) return;
+  if (portfolioItemsLoading) {
+    label.textContent = `Reading items… ${portfolioItemsLoading.toLocaleString('en-US')}`;
+    return;
+  }
   if (portfolioUpdating) {
     label.textContent = portfolioFetchedAt ? 'Updating…' : 'Loading…';
     return;
@@ -1615,18 +1615,6 @@ function ageText(ms) {
   return `${Math.floor(seconds / 3600)}h`;
 }
 
-/*
- * Show more, without the button: reaching the end of the collection table
- * asks for the next pages, as far as OpenSea's twenty.
- */
-$('#portfolio-cards').addEventListener('scroll', (event) => {
-  const list = event.currentTarget;
-  if (!portfolioTruncated || portfolioLoadingMore || portfolioPages >= 20) return;
-  if (list.scrollTop + list.clientHeight < list.scrollHeight - 120) return;
-  portfolioLoadingMore = true;
-  portfolioPages = Math.min(portfolioPages + 6, 20);
-  loadPortfolio(true);
-}, { passive: true });
 
 
 /* ---------------------------------------------------------------- boot */

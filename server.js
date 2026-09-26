@@ -324,59 +324,132 @@ async function openSeaPortfolioPage(addresses, cursor) {
  * carry attributes, rarity, listings and more; keeping all of it would move
  * the weight problem from OpenSea's page into ours.
  */
-async function openSeaPortfolioItems(addresses, maxPages, extraItems = []) {
-  const pages = Math.max(1, Math.min(Number(maxPages) || 4, 20));
-  const items = [];
-  const seen = new Set();   // belt and braces: a repeated page must not double-count
-  let cursor = null;
-  let truncated = false;
+/* One item from the profile list, cut down to what the tables show. */
+function flattenItem(item) {
+  const collection = item.collection || {};
+  const floor = collection.floorPrice?.pricePerItem || {};
+  const offer = collection.topOffer?.pricePerItem || {};
+  return {
+    id: item.id,
+    name: item.name || `#${item.tokenId ?? ''}`,
+    tokenId: item.tokenId ?? '',
+    contract: item.contractAddress || '',
+    image: item.imageUrl || '',
+    collection: collection.name || collection.slug || '',
+    slug: collection.slug || '',
+    collectionImage: collection.imageUrl || '',
+    verified: Boolean(collection.isVerified),
+    chain: item.chain?.identifier || collection.chain?.identifier || '',
+    owner: (item.owner?.address || '').toLowerCase(),
+    floorUsd: Number(floor.usd) || 0,
+    floorUnit: floor.token?.unit ?? null,
+    floorSymbol: floor.token?.symbol || '',
+    /*
+     * Top offer, not floor, is what a holding is actually worth today:
+     * the floor is what someone is ASKING, the top offer is what someone
+     * is willing to PAY right now. Summing floors read about half as much
+     * again as OpenSea's own valuation; summing top offers lands on it.
+     */
+    offerUsd: Number(offer.usd) || 0,
+    offerUnit: offer.token?.unit ?? offer.native?.unit ?? null,
+    offerSymbol: offer.token?.symbol || '',
+  };
+}
 
-  for (let page = 0; page < pages; page += 1) {
+/*
+ * The whole item list, read to its end in the background.
+ *
+ * OpenSea hands the list out fifty at a time, most valuable first. Reading
+ * only the first few pages left a large wallet's cheaper collections out --
+ * one with 2,000 pieces showed 73 of a collection it held 111 of -- and the
+ * counts crept up as more pages came in. Now the whole list is read once,
+ * the page shows how far it has got, and after that:
+ *
+ *   - every refresh re-reads the first pages, where the value is, and
+ *     updates those items in place (a few requests);
+ *   - every half hour the whole list is read again, into a fresh copy that
+ *     replaces the old one only when complete, so sold pieces drop out
+ *     without the counts ever dipping while it runs.
+ */
+const QUICK_PAGES = 4;
+const MAX_PAGES = 200;                 // 10,000 items
+const FULL_EVERY_MS = 30 * 60 * 1000;
+const QUICK_EVERY_MS = 4 * 60 * 1000;
+let crawl = null;
+
+async function readItemPages(addresses, maxPages, onItems) {
+  let cursor = null;
+  for (let page = 0; page < maxPages; page += 1) {
     const chunk = await openSeaPortfolioPage(addresses, cursor);
-    for (const item of chunk.items || []) {
-      if (seen.has(item.id)) continue;
-      seen.add(item.id);
-      const collection = item.collection || {};
-      const floor = collection.floorPrice?.pricePerItem || {};
-      const offer = collection.topOffer?.pricePerItem || {};
-      items.push({
-        id: item.id,
-        name: item.name || `#${item.tokenId ?? ''}`,
-        tokenId: item.tokenId ?? '',
-        contract: item.contractAddress || '',
-        image: item.imageUrl || '',
-        collection: collection.name || collection.slug || '',
-        slug: collection.slug || '',
-        collectionImage: collection.imageUrl || '',
-        verified: Boolean(collection.isVerified),
-        chain: item.chain?.identifier || collection.chain?.identifier || '',
-        owner: (item.owner?.address || '').toLowerCase(),
-        floorUsd: Number(floor.usd) || 0,
-        floorUnit: floor.token?.unit ?? null,
-        floorSymbol: floor.token?.symbol || '',
-        /*
-         * Top offer, not floor, is what a holding is actually worth today:
-         * the floor is what someone is ASKING, the top offer is what someone
-         * is willing to PAY right now. Summing floors read about half as much
-         * again as OpenSea's own valuation; summing top offers lands on it.
-         */
-        offerUsd: Number(offer.usd) || 0,
-        offerUnit: offer.token?.unit ?? offer.native?.unit ?? null,
-        offerSymbol: offer.token?.symbol || '',
-      });
-    }
+    onItems(chunk.items || []);
     cursor = chunk.nextPageCursor || null;
-    if (!cursor) break;
-    if (page === pages - 1) truncated = true;
+    if (!cursor) return true;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return false;
+}
+
+function startFullRead(state, addresses) {
+  if (state.running) return;
+  const next = new Map();
+  state.progress = 0;
+  state.error = '';
+  state.running = readItemPages(addresses, MAX_PAGES, (items) => {
+    for (const item of items) if (!next.has(item.id)) next.set(item.id, flattenItem(item));
+    state.progress = next.size;
+    // The first read shows as it goes; later ones swap in when done.
+    if (!state.complete) state.items = next;
+  })
+    .then((reachedEnd) => {
+      state.items = next;
+      state.complete = true;
+      state.reachedEnd = reachedEnd;
+      state.fullAt = Date.now();
+      state.quickAt = Date.now();
+    })
+    .catch((error) => {
+      state.error = error.message;
+      console.log(`  Items: full read stopped (${error.message})`);
+    })
+    .finally(() => { state.running = null; });
+}
+
+async function quickRead(state, addresses) {
+  const fresh = [];
+  await readItemPages(addresses, QUICK_PAGES, (items) => fresh.push(...items));
+  for (const item of fresh) state.items.set(item.id, flattenItem(item));
+  state.quickAt = Date.now();
+}
+
+async function openSeaPortfolioItems(addresses, extraItems = []) {
+  const key = addresses.join(',');
+  if (!crawl || crawl.key !== key) {
+    crawl = { key, items: new Map(), complete: false, progress: 0, running: null, fullAt: 0, quickAt: 0, error: '' };
+    startFullRead(crawl, addresses);
+    // The first answer waits for the first few pages, not for all of them.
+    const started = Date.now();
+    while (!crawl.complete && !crawl.error && crawl.progress < QUICK_PAGES * 50 && Date.now() - started < 15000) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+  } else if (crawl.complete && !crawl.running) {
+    if (Date.now() - crawl.fullAt > FULL_EVERY_MS) startFullRead(crawl, addresses);
+    else if (Date.now() - crawl.quickAt > QUICK_EVERY_MS) await quickRead(crawl, addresses).catch(() => {});
+  } else if (!crawl.complete && !crawl.running) {
+    // A first read that failed part way is tried again.
+    startFullRead(crawl, addresses);
   }
 
+  const items = [...crawl.items.values()];
   // The hand-added pieces join here, so they group and total like the rest.
   items.push(...(await extraItems));
 
   return {
     collections: groupByCollection(items),
     itemCount: items.length,
-    truncated,
+    // Still reading the list: the page says how far, and the counts grow.
+    loading: !crawl.complete,
+    loaded: crawl.progress,
+    complete: crawl.complete,
     floorTotalUsd: items.reduce((sum, item) => sum + item.floorUsd, 0),
     offerTotalUsd: items.reduce((sum, item) => sum + item.offerUsd, 0),
   };
@@ -787,13 +860,14 @@ const server = http.createServer(async (req, res) => {
       const wallets = configured.map((w) => w.address);
       const manual = manualPortfolioItems().catch(() => []);
       const [items, tokens] = await Promise.all([
-        openSeaPortfolioItems(wallets, Number(url.searchParams.get('pages') || 4), manual),
+        openSeaPortfolioItems(wallets, manual),
         openSeaTokens(wallets),
       ]);
-      const move = recordPortfolioChange(
+      // A list still being read would show its growth as price changes.
+      const move = items.complete ? recordPortfolioChange(
         portfolioValues(items.collections, tokens.tokens, !tokens.tokenError),
         (items.collections || []).reduce((sum, g) => sum + (g.valueUsd || 0), 0) + (tokens.tokenTotalUsd || 0),
-      );
+      ) : null;
       return send(res, 200, { available: true, wallets, move, ...tokens, ...items });
     }
 
