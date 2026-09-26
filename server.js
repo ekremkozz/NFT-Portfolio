@@ -16,6 +16,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 const PORT = Number(process.env.PORT) || 4180;
 // Loopback only: the page is for whoever runs it. Codespaces forwards it
@@ -38,12 +39,25 @@ function isAddress(value) {
   return /^0x[0-9a-fA-F]{40}$/.test(String(value || '').trim());
 }
 
+/*
+ * Answers are gzipped when the browser accepts it. The portfolio answer for a
+ * large wallet carries every piece held -- several megabytes of JSON that
+ * compresses about tenfold.
+ */
 function send(res, status, body, headers = {}) {
-  const payload = typeof body === 'string' ? body : JSON.stringify(body);
+  let payload = typeof body === 'string' ? body : JSON.stringify(body);
+  const extra = {};
+  const accepts = String(res.req?.headers['accept-encoding'] || '');
+  if (payload.length > 2048 && /\bgzip\b/.test(accepts)) {
+    payload = zlib.gzipSync(payload, { level: 6 });
+    extra['content-encoding'] = 'gzip';
+    extra.vary = 'Accept-Encoding';
+  }
   res.writeHead(status, {
     'content-type': typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8',
     'cache-control': 'no-store',
     'x-content-type-options': 'nosniff',
+    ...extra,
     ...headers,
   });
   res.end(payload);
@@ -869,6 +883,18 @@ const server = http.createServer(async (req, res) => {
         (items.collections || []).reduce((sum, g) => sum + (g.valueUsd || 0), 0) + (tokens.tokenTotalUsd || 0),
       ) : null;
       return send(res, 200, { available: true, wallets, move, ...tokens, ...items });
+    }
+
+    /*
+     * How far the item read has got, and nothing else: while a long list is
+     * read the page asks this every few seconds, and the whole portfolio --
+     * megabytes for a large wallet -- only now and then.
+     */
+    if (route === '/api/portfolio/status' && req.method === 'GET') {
+      return send(res, 200, {
+        loading: Boolean(crawl && !crawl.complete),
+        loaded: crawl ? crawl.progress : 0,
+      });
     }
 
     if (route === '/api/portfolio/history' && req.method === 'GET') {

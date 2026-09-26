@@ -19,8 +19,9 @@
  *    floor, not the CPU figure: short work, and work outside the main thread
  *    (image decoding, the compositor), is not in it. The browser's own task
  *    manager (Shift+Esc in Chrome and Brave) stays the authority on CPU.
- *  - FPS: frames the page drew in the last second. A page at rest that keeps
- *    drawing is spending power on animation.
+ *  - FPS: frames the browser managed to draw in the last second. Higher is
+ *    smoother, up to the screen's refresh rate (60, 120, 144...); a page
+ *    that keeps the main thread busy drops frames and stutters.
  *  - Memory: the page's JavaScript heap (Chromium browsers only).
  *  - DOM: how many elements the page holds.
  *  - Downloaded: requests since the page opened and the bytes the browser can

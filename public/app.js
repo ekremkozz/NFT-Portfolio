@@ -478,14 +478,13 @@ async function loadPortfolio(force) {
    */
   summary.textContent = '';
 
-  // More behind this page: the table fetches it when scrolled to its end.
   /*
-   * The server is still reading a long item list: say how far it has got in
-   * the counter, and ask again shortly -- the counts grow until it is done.
+   * The server is still reading a long item list: the counter follows its
+   * progress, and the tables catch up now and then until it is done.
    */
   portfolioItemsLoading = data.loading ? (data.loaded || 0) : 0;
   clearTimeout(portfolioLoadingTimer);
-  if (data.loading) portfolioLoadingTimer = setTimeout(() => loadPortfolio(true), 5000);
+  if (data.loading) watchItemRead();
 
   /*
    * Tokens that could not be read this time: the last list stays rather than
@@ -520,6 +519,32 @@ async function loadPortfolio(force) {
 }
 
 let portfolioDrawn = { items: '', tokens: '' };
+
+/*
+ * While a long list is read: the progress every 3 seconds from a few bytes'
+ * answer, the whole portfolio -- megabytes for a large wallet -- every 15
+ * seconds and once more when the read is done. Asking for everything every
+ * few seconds was most of what the page downloaded.
+ */
+const READ_STATUS_MS = 3000;
+const READ_FULL_MS = 15000;
+
+function watchItemRead() {
+  let waited = 0;
+  const tick = async () => {
+    let status = null;
+    try { status = await api('/api/portfolio/status'); } catch { /* ask the full one */ }
+    waited += READ_STATUS_MS;
+    if (!status || !status.loading || waited >= READ_FULL_MS) {
+      loadPortfolio(true);
+      return;
+    }
+    portfolioItemsLoading = status.loaded || portfolioItemsLoading;
+    paintPortfolioUpdated();
+    portfolioLoadingTimer = setTimeout(tick, READ_STATUS_MS);
+  };
+  portfolioLoadingTimer = setTimeout(tick, READ_STATUS_MS);
+}
 
 /** Cards, tokens and the headline always move together. */
 function renderPortfolioView() {
@@ -576,12 +601,84 @@ function renderPortfolioCards() {
     return;
   }
   rows.textContent = '';
-  for (const group of groups) {
-    const row = portfolioRow(group);
-    rows.appendChild(row);
-    attachPortfolioItems(row, group);
+  tableWindow.groups = groups;
+  tableWindow.drawn = new Map();
+  tableWindow.first = -1;
+  tableWindow.top = document.createElement('div');
+  tableWindow.bottom = document.createElement('div');
+  tableWindow.top.className = tableWindow.bottom.className = 'pf-spacer';
+  rows.append(tableWindow.top, tableWindow.bottom);
+  paintTableWindow(true);
+}
+
+/*
+ * Only the rows near the screen exist. A large wallet has hundreds of
+ * collections; drawing every row put tens of thousands of elements on the
+ * page -- more than OpenSea's own -- for rows nobody was looking at. Two
+ * spacers stand in for the rows above and below, so the scrollbar and the
+ * scroll position are those of the whole table, and rows already drawn are
+ * kept while they stay in range, so scrolling only adds and drops the edges.
+ */
+const tableWindow = { groups: [], drawn: new Map(), first: -1, top: null, bottom: null, rowHeight: 56 };
+const TABLE_BUFFER = 12;
+
+function paintTableWindow(force = false) {
+  const rows = $('#portfolio-cards');
+  if (!rows || !tableWindow.top || !tableWindow.top.isConnected) return;
+  const { groups } = tableWindow;
+  const height = tableWindow.rowHeight;
+  const first = Math.max(0, Math.floor(rows.scrollTop / height) - TABLE_BUFFER);
+  const last = Math.min(groups.length, Math.ceil((rows.scrollTop + rows.clientHeight) / height) + TABLE_BUFFER);
+  // Small scrolls inside the buffer change nothing.
+  if (!force && Math.abs(first - tableWindow.first) < TABLE_BUFFER / 2 && tableWindow.drawn.size) return;
+  tableWindow.first = first;
+
+  const keep = new Map();
+  for (let i = first; i < last; i += 1) {
+    const group = groups[i];
+    let row = tableWindow.drawn.get(group);
+    if (!row) {
+      row = portfolioRow(group);
+      attachPortfolioItems(row, group);
+    }
+    keep.set(group, row);
+  }
+  for (const [group, row] of tableWindow.drawn) {
+    if (keep.has(group)) continue;
+    forgetPictures(row);
+    row.remove();
+  }
+  // In order, between the spacers; a row already in place is not moved.
+  let cursor = tableWindow.top;
+  for (const row of keep.values()) {
+    if (cursor.nextSibling !== row) cursor.after(row);
+    cursor = row;
+  }
+  tableWindow.drawn = keep;
+  tableWindow.top.style.height = `${first * height}px`;
+  tableWindow.bottom.style.height = `${Math.max(0, groups.length - last) * height}px`;
+
+  // The real row height, measured once rows exist: the CSS says 56px, but
+  // a zoomed page or a changed style would otherwise misplace the window.
+  const sample = keep.values().next().value;
+  if (sample) {
+    const measured = sample.getBoundingClientRect().height;
+    if (measured && Math.abs(measured - height) > 0.5) {
+      tableWindow.rowHeight = measured;
+      paintTableWindow(true);
+    }
   }
 }
+
+let tableWindowFrame = 0;
+$('#portfolio-cards').addEventListener('scroll', () => {
+  if (tableWindowFrame) return;
+  tableWindowFrame = requestAnimationFrame(() => {
+    tableWindowFrame = 0;
+    paintTableWindow();
+  });
+}, { passive: true });
+window.addEventListener('resize', () => paintTableWindow(true));
 
 /* A held piece's own page on OpenSea, or '' when it cannot be addressed. */
 function itemPageUrl(item, group) {
