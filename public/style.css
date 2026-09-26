@@ -351,7 +351,12 @@ main.main:has(> section.tab[data-tab="portfolio"].is-active) { padding-bottom: 0
 .pf-row:hover { background: var(--panel-2); }
 .pf-row.is-expandable { cursor: pointer; }
 .pf-items-modal { display: block; backdrop-filter: blur(6px); }
-.pf-items-modal .pf-lit-frame { position: absolute; box-sizing: border-box; pointer-events: none; }
+.pf-items-modal .pf-lit-frame { position: absolute; box-sizing: border-box; }
+/* The headings and row above the blur take clicks and let their text be
+   selected: a click there -- to copy a value -- no longer falls through to
+   the backdrop and closes the pop-up. */
+.pf-items-modal .pf-lit-frame, .pf-items-modal .pf-lit-frame * { pointer-events: auto; user-select: text; cursor: auto; }
+.pf-items-modal .pf-lit-frame a { cursor: pointer; }
 .pf-items-modal .pf-row-lit,
 .pf-items-modal .pf-head-lit {
   position: absolute; margin: 0; box-sizing: border-box; background: none; border-radius: 0;
@@ -656,3 +661,12 @@ button.update-note.is-applied:hover { background: rgba(52, 199, 123, .18); }
 :root { --page-zoom: 1.1; }
 body { zoom: var(--page-zoom); }
 .shell { min-height: calc(100vh / var(--page-zoom)); }
+
+/* Filters as pills, the same height as the search box. */
+.pf-items-tools .pf-items-chip { height: 32px; padding: 0 14px; border-radius: 999px; }
+.pf-items-tools .pf-items-sort {
+  height: 32px; padding: 0 30px 0 14px; border-radius: 999px; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background: var(--panel-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238c8c8c' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center;
+}
+.pf-items-tools .pf-items-sort:hover { border-color: rgba(255, 255, 255, .2); }

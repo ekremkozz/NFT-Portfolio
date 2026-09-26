@@ -813,7 +813,6 @@ function openPortfolioItems(group, row) {
     return x.length - y.length || (x < y ? -1 : x > y ? 1 : 0);
   };
 
-  let count = null;
   const drawPieces = () => {
     const query = view.query.trim().toLowerCase().replace(/^#/, '');
     let shown = byWallet.filter((item) => {
@@ -833,11 +832,6 @@ function openPortfolioItems(group, row) {
       none.className = 'pf-items-none';
       none.textContent = 'No pieces match.';
       grid.appendChild(none);
-    }
-    if (count) {
-      count.textContent = shown.length === byWallet.length
-        ? `${byWallet.length}`
-        : `${shown.length} of ${byWallet.length}`;
     }
   };
 
@@ -893,9 +887,6 @@ function openPortfolioItems(group, row) {
     }
     sort.addEventListener('change', () => { view.sort = sort.value; drawPieces(); });
     tools.appendChild(sort);
-    count = document.createElement('span');
-    count.className = 'pf-items-count';
-    tools.appendChild(count);
     card.appendChild(tools);
   }
   drawPieces();
