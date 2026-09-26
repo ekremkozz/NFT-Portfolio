@@ -601,7 +601,7 @@ function openPortfolioItems(group, row) {
     return at < 0 ? portfolioWalletList.length : at;
   };
   const byWallet = [...group.items].sort((a, b) => walletOrder(a.owner) - walletOrder(b.owner));
-  for (const item of byWallet) {
+  byWallet.forEach((item, index) => {
     const cell = document.createElement(itemPageUrl(item, group) ? 'a' : 'div');
     cell.className = 'pf-item-cell';
     if (cell.tagName === 'A') {
@@ -637,8 +637,16 @@ function openPortfolioItems(group, row) {
     }
     if (tags.children.length) text.appendChild(tags);
     cell.append(pic, text);
+    /*
+     * Its place in the list, in the top-right corner: scrolled to the end,
+     * the last number is the count held -- every piece is here.
+     */
+    const place = document.createElement('span');
+    place.className = 'pf-item-index';
+    place.textContent = String(index + 1);
+    cell.appendChild(place);
     grid.appendChild(cell);
-  }
+  });
 
   card.append(grid);
   /*

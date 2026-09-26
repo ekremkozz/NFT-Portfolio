@@ -564,3 +564,10 @@ select:-webkit-autofill {
 .lite-link[hidden] { display: none; }
 .pf-error-line { display: block; margin: -4px 0 10px; color: var(--amber); font-size: 12.5px; }
 .pf-error-line:empty { display: none; }
+
+/* Each piece's place in the pop-up's list, small in its top-right corner. */
+.pf-item-cell { position: relative; }
+.pf-item-index {
+  position: absolute; top: 5px; right: 8px; font-family: var(--mono);
+  font-size: 10px; line-height: 1; color: var(--faint); font-variant-numeric: tabular-nums;
+}
