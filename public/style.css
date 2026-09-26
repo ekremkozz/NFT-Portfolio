@@ -689,3 +689,11 @@ body.single-wallet .pf-tok-head, body.single-wallet .pf-token { grid-template-co
 .lang-switch button + button { border-left: 1px solid var(--line); }
 .lang-switch button.is-on { color: var(--text); background: var(--panel-3); }
 .lang-switch button:hover:not(.is-on) { color: var(--text); }
+
+/* The search over each table, above its headings. */
+.pf-table-search {
+  flex: none; height: 32px; margin: 12px 2px 4px; padding: 0 12px; box-sizing: border-box;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2);
+  color: var(--text); font: inherit; font-size: 12.5px;
+}
+.pf-table-search:focus { outline: none; border-color: var(--accent); }

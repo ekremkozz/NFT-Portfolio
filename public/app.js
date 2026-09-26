@@ -70,6 +70,9 @@ const STRINGS = {
     noItems: 'No items visible in these wallets.',
     noPieces: 'No pieces match.',
     searchPieces: 'Search name or #',
+    searchCollections: 'Search collections',
+    searchTokens: 'Search tokens',
+    noMatch: 'Nothing matches the search.',
     all: 'All',
     byWallet: 'By wallet',
     tokensError: 'Tokens could not be read from OpenSea. Refresh to try again.',
@@ -137,6 +140,9 @@ const STRINGS = {
     noItems: 'Bu cüzdanlarda görünen item yok.',
     noPieces: 'Eşleşen item yok.',
     searchPieces: 'İsim ya da # ara',
+    searchCollections: 'Koleksiyon ara',
+    searchTokens: 'Token ara',
+    noMatch: 'Aramayla eşleşen yok.',
     all: 'Tümü',
     byWallet: 'Cüzdana göre',
     tokensError: 'Tokenler OpenSea\u2019den okunamadı. Tekrar denemek için yenile.',
@@ -205,6 +211,7 @@ function serverText(message) {
 function applyStaticText() {
   document.documentElement.lang = lang;
   for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  for (const el of document.querySelectorAll('[data-i18n-placeholder]')) el.placeholder = t(el.dataset.i18nPlaceholder);
   for (const button of document.querySelectorAll('.lang-switch button')) {
     button.classList.toggle('is-on', button.dataset.lang === lang);
   }
@@ -766,6 +773,24 @@ function watchItemRead() {
 }
 
 /** Cards, tokens and the headline always move together. */
+/*
+ * A search over each table: the collections by name, the tokens by name or
+ * symbol. They narrow the rows only; the totals above stay whole.
+ */
+const tableSearch = { collections: '', tokens: '' };
+const searchMatch = (query, ...texts) => !query
+  || texts.some((text) => String(text || '').toLowerCase().includes(query));
+
+$('#pf-search-collections')?.addEventListener('input', (event) => {
+  tableSearch.collections = event.target.value.trim().toLowerCase();
+  $('#portfolio-cards').scrollTop = 0;
+  renderPortfolioCards();
+});
+$('#pf-search-tokens')?.addEventListener('input', (event) => {
+  tableSearch.tokens = event.target.value.trim().toLowerCase();
+  renderPortfolioTokens(filteredPortfolioTokens());
+});
+
 function renderPortfolioView() {
   renderPortfolioCards();
   renderPortfolioTokens(filteredPortfolioTokens());
@@ -810,11 +835,13 @@ function renderPortfolioCards() {
   paintPortfolioSort();
 
   const valueOf = PORTFOLIO_SORT_VALUE[portfolioSort.key] || PORTFOLIO_SORT_VALUE.value;
-  const groups = [...filteredPortfolioGroups()]
+  const groups = filteredPortfolioGroups()
+    .filter((group) => searchMatch(tableSearch.collections, group.name, group.slug))
     .sort((a, b) => portfolioSort.dir * (valueOf(a) - valueOf(b)));
   forgetPictures(rows);
   if (!groups.length) {
-    rows.innerHTML = portfolioFilter.size
+    rows.innerHTML = tableSearch.collections ? `<div class="empty-sub">${t('noMatch')}</div>`
+      : portfolioFilter.size
       ? `<div class="empty-sub">${t('noItemsSelected')}</div>`
       : `<div class="empty-sub">${t('noItems')}</div>`;
     return;
@@ -855,9 +882,17 @@ function paintTableWindow(force = false) {
   const height = tableWindow.rowHeight;
   const first = Math.max(0, Math.floor(rows.scrollTop / height) - TABLE_BUFFER);
   const last = Math.min(groups.length, Math.ceil((rows.scrollTop + rows.clientHeight) / height) + TABLE_BUFFER);
-  // Small scrolls inside the buffer change nothing.
-  if (!force && Math.abs(first - tableWindow.first) < TABLE_BUFFER / 2 && tableWindow.drawn.size) return;
+  /*
+   * Small scrolls inside the buffer change nothing -- unless the window has
+   * reached an end of the table. There the clamped start barely moves, and
+   * skipping it left the rows above unpainted: a blank band at the top.
+   */
+  const reachedEnd = (first === 0 && tableWindow.first !== 0)
+    || (last === groups.length && tableWindow.last !== groups.length);
+  if (!force && tableWindow.drawn.size && !reachedEnd
+    && Math.abs(first - tableWindow.first) < TABLE_BUFFER / 2) return;
   tableWindow.first = first;
+  tableWindow.last = last;
 
   const keep = new Map();
   for (let i = first; i < last; i += 1) {
@@ -1490,6 +1525,13 @@ function renderPortfolioTokens(tokens) {
   const list = $('#portfolio-tokens');
   forgetPictures(list);
   list.textContent = '';
+  if (tokens.length && tableSearch.tokens) {
+    tokens = tokens.filter((token) => searchMatch(tableSearch.tokens, token.name, token.symbol));
+    if (!tokens.length) {
+      list.innerHTML = `<div class="empty-sub">${t('noMatch')}</div>`;
+      return;
+    }
+  }
   // The panel stays, headings and all, while loading and when empty: the
   // page keeps its shape instead of the collections standing alone.
   if (!tokens.length) {
