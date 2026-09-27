@@ -181,12 +181,35 @@ select { cursor: pointer; }
 }
 .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
-.pf-history-card { width: min(720px, 100%); }
-.pf-history-list { display: flex; flex-direction: column; max-height: 60vh; overflow-y: auto; }
+.pf-history-card { width: min(820px, 100%); }
+/* Title on the left, the steps on the right. */
+.pf-history-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.pf-history-head .modal-title { margin: 0; }
+.pf-history-steps { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.pf-history-custom { display: inline-flex; align-items: center; gap: 4px; margin-left: 2px; }
+.pf-history-custom[hidden] { display: none; }
+.pf-history-custom input, .pf-history-custom select {
+  height: 28px; box-sizing: border-box; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--text); font: inherit; font-size: 12px; padding: 0 10px;
+}
+.pf-history-custom input { width: 64px; }
+.pf-history-custom input:focus, .pf-history-custom select:focus { outline: none; border-color: var(--accent); }
+/* One set of columns for every line, as wide as its widest time. */
+.pf-history-list {
+  display: grid; grid-template-columns: max-content max-content minmax(0, 1fr) max-content;
+  align-content: start; max-height: 60vh; overflow-y: auto;
+}
+.pf-history-list > .empty-sub { grid-column: 1 / -1; }
 .pf-history-row {
-  display: grid; grid-template-columns: 52px auto 1fr auto; align-items: center; gap: 12px;
+  grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; column-gap: 12px;
   padding: 9px 2px; border-bottom: 1px solid var(--line); font-size: 12.5px;
 }
+.pf-history-row.is-head {
+  position: sticky; top: 0; z-index: 1; background: var(--panel); padding-top: 4px; padding-bottom: 8px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+}
+.pf-history-row.is-head > :last-child { text-align: right; }
+.pf-history-total { text-align: right; }
 .pf-history-row:last-child { border-bottom: 0; }
 .pf-history-time { font-family: var(--mono); color: var(--muted); }
 .pf-history-moves { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; font-size: 12px; }

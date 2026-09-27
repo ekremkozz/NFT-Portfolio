@@ -738,7 +738,9 @@ async function resolveManualNft(link, quantity, owner) {
  * (or fall) of its whole value, and a failed token read as tokens gone to 0.
  */
 const PORTFOLIO_HISTORY_PATH = path.join(DATA_DIR, 'portfolio-history.json');
-const HISTORY_KEEP_MS = 24 * 3600 * 1000;
+// A week: the page can group the changes by the hour, six, twelve or a day,
+// and a day's steps want more than one day to compare.
+const HISTORY_KEEP_MS = 7 * 24 * 3600 * 1000;
 
 function readPortfolioHistory() {
   try {

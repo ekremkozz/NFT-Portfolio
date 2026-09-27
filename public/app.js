@@ -80,9 +80,20 @@ const STRINGS = {
     tokensError: 'Tokens could not be read from OpenSea. Refresh to try again.',
     noTokens: 'No tokens in these wallets.',
     backToTop: 'Back to the top',
-    historyTitle: 'Price changes · last 24 hours',
+    historyTitle: 'Price changes · last {range}',
+    rangeHours: '{n} hours',
+    rangeDays: '{n} days',
+    stepEach: 'Each read',
+    histTime: 'Time',
+    histDay: 'Day',
+    histChange: 'Change',
+    histHoldings: 'Collection',
+    stepHours: '{n}h',
+    stepCustom: 'Custom',
+    unitMin: 'min',
+    unitHour: 'h',
     loading: 'Loading…',
-    noHistory: 'No price changes in the last 24 hours.',
+    noHistory: 'No price changes in the last {range}.',
     manualTitle: 'Add an NFT by hand',
     manualNote: 'For pieces OpenSea shows under none of your wallets, such as staked ones. Paste the item\u2019s OpenSea link, or the collection\u2019s link and how many you hold.',
     openseaLink: 'OpenSea link',
@@ -153,9 +164,20 @@ const STRINGS = {
     tokensError: 'Tokenler OpenSea\u2019den okunamadı. Tekrar denemek için yenile.',
     noTokens: 'Bu cüzdanlarda token yok.',
     backToTop: 'Başa dön',
-    historyTitle: 'Fiyat değişimleri · son 24 saat',
+    historyTitle: 'Fiyat değişimleri · son {range}',
+    rangeHours: '{n} saat',
+    rangeDays: '{n} gün',
+    stepEach: 'Her okuma',
+    histTime: 'Saat',
+    histDay: 'Gün',
+    histChange: 'Değişim',
+    histHoldings: 'Koleksiyon',
+    stepHours: '{n} sa',
+    stepCustom: 'Özel',
+    unitMin: 'dk',
+    unitHour: 'sa',
     loading: 'Yükleniyor…',
-    noHistory: 'Son 24 saatte fiyat değişimi yok.',
+    noHistory: 'Son {range} içinde fiyat değişimi yok.',
     manualTitle: 'Elle NFT ekle',
     manualNote: 'OpenSea\u2019nin hiçbir cüzdanında göstermediği parçalar için, örneğin stake edilmiş olanlar. İtemin OpenSea linkini ya da koleksiyonun linkini ve kaç tane tuttuğunu yapıştır.',
     openseaLink: 'OpenSea linki',
@@ -1946,13 +1968,80 @@ $('#portfolio-add').addEventListener('click', openManualNfts);
  */
 $('#portfolio-history').addEventListener('click', openPortfolioHistory);
 
+/*
+ * The price changes, each read's (every five minutes) or added up by the
+ * hour, six, twelve, a day, or a step of one's own. The choice is kept in
+ * this browser. The app keeps a week of reads; a step is shown over 24 of
+ * itself, at least a day and at most that week.
+ */
+const HISTORY_STEP_KEY = 'nftPortfolio.historyStep';
+const HOUR_MS = 3600 * 1000;
+const HISTORY_KEEP_MS = 7 * 24 * HOUR_MS;
+
+function readHistoryStep() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(HISTORY_STEP_KEY) || 'null');
+    if (saved && Number(saved.ms) >= 0) return saved;
+  } catch { /* the default */ }
+  return { ms: 0, custom: false, amount: 3, unit: 'h' };
+}
+
+function saveHistoryStep(step) {
+  try { localStorage.setItem(HISTORY_STEP_KEY, JSON.stringify(step)); } catch { /* not kept */ }
+}
+
+function historyRange(stepMs) {
+  const range = Math.min(HISTORY_KEEP_MS, Math.max(24 * HOUR_MS, stepMs * 24));
+  const hours = Math.round(range / HOUR_MS);
+  return hours >= 48 && hours % 24 === 0 ? t('rangeDays', { n: hours / 24 }) : t('rangeHours', { n: hours });
+}
+
+/*
+ * Reads added up into steps, lined up on the local clock (whole hours, and
+ * six-hour steps from midnight): each step's net, its biggest moves summed
+ * by name, and the total at its last read. Each read carries its six biggest
+ * moves only, so a step's moves are those -- the net is exact.
+ */
+function groupHistory(events, stepMs) {
+  if (!stepMs) return events.map((event) => ({ ...event, from: event.at, to: event.at }));
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  const origin = midnight.getTime();
+  const steps = new Map();
+  for (const event of events) {
+    const key = Math.floor((event.at - origin) / stepMs);
+    let step = steps.get(key);
+    if (!step) {
+      step = { from: origin + key * stepMs, to: origin + (key + 1) * stepMs, net: 0, total: event.total, at: event.at, sums: new Map() };
+      steps.set(key, step);
+    }
+    step.net += event.net;
+    // Newest first: the first read met is the step's last.
+    for (const move of event.moves || []) step.sums.set(move.name, (step.sums.get(move.name) || 0) + move.change);
+  }
+  return [...steps.values()]
+    .map((step) => ({
+      ...step,
+      net: Math.round(step.net * 100) / 100,
+      moves: [...step.sums]
+        .map(([name, change]) => ({ name, change: Math.round(change * 100) / 100 }))
+        .filter((move) => Math.abs(move.change) >= 0.01)
+        .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+        .slice(0, 6),
+    }))
+    .filter((step) => Math.abs(step.net) >= 0.01);
+}
+
 async function openPortfolioHistory() {
   document.querySelector('.pf-history-modal')?.remove();
   const modal = document.createElement('div');
   modal.className = 'modal pf-history-modal';
   modal.innerHTML = `
     <div class="modal-card pf-history-card">
-      <div class="modal-title">${t('historyTitle')}</div>
+      <div class="pf-history-head">
+        <div class="modal-title" id="pf-history-title"></div>
+        <div class="pf-history-steps" id="pf-history-steps"></div>
+      </div>
       <div class="pf-history-list" id="pf-history-list"><div class="empty-sub">${t('loading')}</div></div>
       <div class="modal-actions"><button class="btn" id="pf-history-close" type="button">${t('close')}</button></div>
     </div>`;
@@ -1964,6 +2053,10 @@ async function openPortfolioHistory() {
   modal.querySelector('#pf-history-close').addEventListener('click', close);
 
   const list = modal.querySelector('#pf-history-list');
+  const title = modal.querySelector('#pf-history-title');
+  let step = readHistoryStep();
+  title.textContent = t('historyTitle', { range: historyRange(step.ms) });
+
   let events;
   try {
     events = (await api('/api/portfolio/history')).events || [];
@@ -1972,11 +2065,7 @@ async function openPortfolioHistory() {
     list.textContent = err.message;
     return;
   }
-  list.textContent = '';
-  if (!events.length) {
-    list.innerHTML = `<div class="empty-sub">${t('noHistory')}</div>`;
-    return;
-  }
+
   const signed = (usd) => `${usd > 0 ? '+' : '−'}${formatUsd(Math.abs(usd))}`;
   /*
    * Where a name in the history leads: a collection to its OpenSea page, a
@@ -1999,48 +2088,144 @@ async function openPortfolioHistory() {
   }
   const pageFor = (name) => pages.get(name) || {};
   const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  for (const event of events) {
-    const row = document.createElement('div');
-    row.className = 'pf-history-row';
-    const when = document.createElement('span');
-    when.className = 'pf-history-time';
-    when.textContent = clock(event.at);
-    const net = document.createElement('span');
-    net.className = `move-pill ${event.net > 0 ? 'is-up' : 'is-down'}`;
-    net.textContent = signed(event.net);
-    const moves = document.createElement('span');
-    moves.className = 'pf-history-moves';
-    for (const move of event.moves || []) {
-      // Each holding its own chip, a link to its OpenSea page where one is known.
-      const { url, image, eth } = pageFor(move.name);
-      const part = document.createElement(url ? 'a' : 'span');
-      part.className = `pf-history-move ${move.change > 0 ? 'is-up' : 'is-down'}`;
-      if (url) {
-        part.href = url;
-        part.target = '_blank';
-        part.rel = 'noopener noreferrer';
-      }
-      // Its picture, small: ether drawn on white as in the token table.
-      if (eth || image) {
-        const pic = document.createElement('i');
-        pic.className = 'pf-history-pic';
-        if (eth) pic.innerHTML = ETH_ON_WHITE;
-        else pic.appendChild(stillImage(image, 18, ''));
-        part.appendChild(pic);
-      }
-      const name = document.createElement('span');
-      name.textContent = move.name;
-      const amount = document.createElement('b');
-      amount.textContent = signed(move.change);
-      part.append(name, amount);
-      moves.appendChild(part);
+  const day = (ms) => new Date(ms).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short' });
+  const today = new Date().toDateString();
+  // When a line is: a read's time; a step's span, its day when not today;
+  // a whole day's step, its date.
+  const when = (entry, stepMs) => {
+    if (!stepMs) {
+      // A read after a gap -- the app asleep, or nothing moved for a while --
+      // carries everything since the read before: shown as that span.
+      const gap = entry.since && entry.at - entry.since > 12 * 60 * 1000;
+      const span = gap ? `${clock(entry.since)}–${clock(entry.at)}` : clock(entry.at);
+      return new Date(entry.at).toDateString() === today ? span : `${day(entry.at)} ${span}`;
     }
-    const total = document.createElement('span');
-    total.className = 'pf-history-total';
-    total.textContent = formatUsd(event.total);
-    row.append(when, net, moves, total);
-    list.appendChild(row);
+    if (stepMs >= 24 * HOUR_MS && stepMs % (24 * HOUR_MS) === 0) return day(entry.from);
+    const span = `${clock(entry.from)}–${clock(entry.to)}`;
+    return new Date(entry.from).toDateString() === today ? span : `${day(entry.from)} ${span}`;
+  };
+
+  const draw = () => {
+    const range = Math.min(HISTORY_KEEP_MS, Math.max(24 * HOUR_MS, step.ms * 24));
+    const since = Date.now() - range;
+    title.textContent = t('historyTitle', { range: historyRange(step.ms) });
+    forgetPictures(list);
+    list.textContent = '';
+    const lines = groupHistory(events.filter((event) => event.at >= since), step.ms);
+    if (!lines.length) {
+      list.innerHTML = `<div class="empty-sub">${t('noHistory', { range: historyRange(step.ms) })}</div>`;
+      return;
+    }
+    // Headings over the columns; a whole day's step is headed by the day.
+    const head = document.createElement('div');
+    head.className = 'pf-history-row is-head';
+    const daily = step.ms >= 24 * HOUR_MS && step.ms % (24 * HOUR_MS) === 0;
+    for (const key of [daily ? 'histDay' : 'histTime', 'histChange', 'histHoldings', 'totalValue']) {
+      const cell = document.createElement('span');
+      cell.textContent = t(key);
+      head.appendChild(cell);
+    }
+    list.appendChild(head);
+    for (const entry of lines) {
+      const row = document.createElement('div');
+      row.className = 'pf-history-row';
+      const time = document.createElement('span');
+      time.className = 'pf-history-time';
+      time.textContent = when(entry, step.ms);
+      const net = document.createElement('span');
+      net.className = `move-pill ${entry.net > 0 ? 'is-up' : 'is-down'}`;
+      net.textContent = signed(entry.net);
+      const moves = document.createElement('span');
+      moves.className = 'pf-history-moves';
+      for (const move of entry.moves || []) {
+        // Each holding its own chip, a link to its OpenSea page where one is known.
+        const { url, image, eth } = pageFor(move.name);
+        const part = document.createElement(url ? 'a' : 'span');
+        part.className = `pf-history-move ${move.change > 0 ? 'is-up' : 'is-down'}`;
+        if (url) {
+          part.href = url;
+          part.target = '_blank';
+          part.rel = 'noopener noreferrer';
+        }
+        // Its picture, small: ether drawn on white as in the token table.
+        if (eth || image) {
+          const pic = document.createElement('i');
+          pic.className = 'pf-history-pic';
+          if (eth) pic.innerHTML = ETH_ON_WHITE;
+          else pic.appendChild(stillImage(image, 18, ''));
+          part.appendChild(pic);
+        }
+        const name = document.createElement('span');
+        name.textContent = move.name;
+        const amount = document.createElement('b');
+        amount.textContent = signed(move.change);
+        part.append(name, amount);
+        moves.appendChild(part);
+      }
+      const total = document.createElement('span');
+      total.className = 'pf-history-total';
+      total.textContent = formatUsd(entry.total);
+      row.append(time, net, moves, total);
+      list.appendChild(row);
+    }
+  };
+
+  /*
+   * The steps, on the right of the title: each read, 1h, 6h, 12h, 24h, and
+   * Custom -- an amount in minutes or hours, up to the week kept.
+   */
+  const steps = modal.querySelector('#pf-history-steps');
+  const custom = document.createElement('span');
+  custom.className = 'pf-history-custom';
+  const amount = document.createElement('input');
+  amount.type = 'number';
+  amount.min = '1';
+  amount.step = '1';
+  amount.value = String(step.amount || 3);
+  const unit = document.createElement('select');
+  for (const [value, label] of [['m', t('unitMin')], ['h', t('unitHour')]]) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    unit.appendChild(option);
   }
+  unit.value = step.unit || 'h';
+  custom.append(amount, unit);
+
+  const pick = (next) => {
+    step = next;
+    saveHistoryStep(step);
+    steps.querySelectorAll('.pf-items-chip').forEach((chip) => {
+      chip.classList.toggle('is-on', chip.dataset.custom ? step.custom : !step.custom && Number(chip.dataset.ms) === step.ms);
+    });
+    custom.hidden = !step.custom;
+    draw();
+  };
+  const fromCustom = () => {
+    const n = Math.max(1, Math.round(Number(amount.value) || 0));
+    const ms = Math.min(HISTORY_KEEP_MS, n * (unit.value === 'm' ? 60 * 1000 : HOUR_MS));
+    return { ms, custom: true, amount: n, unit: unit.value };
+  };
+  for (const [ms, label] of [[0, t('stepEach')], [HOUR_MS, t('stepHours', { n: 1 })], [6 * HOUR_MS, t('stepHours', { n: 6 })],
+    [12 * HOUR_MS, t('stepHours', { n: 12 })], [24 * HOUR_MS, t('stepHours', { n: 24 })]]) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'pf-items-chip';
+    chip.dataset.ms = String(ms);
+    chip.textContent = label;
+    chip.addEventListener('click', () => pick({ ...step, ms, custom: false }));
+    steps.appendChild(chip);
+  }
+  const customChip = document.createElement('button');
+  customChip.type = 'button';
+  customChip.className = 'pf-items-chip';
+  customChip.dataset.custom = '1';
+  customChip.textContent = t('stepCustom');
+  customChip.addEventListener('click', () => { pick(fromCustom()); amount.focus(); });
+  steps.append(customChip, custom);
+  amount.addEventListener('input', () => { if (Number(amount.value) >= 1) pick(fromCustom()); });
+  unit.addEventListener('change', () => pick(fromCustom()));
+  pick(step);
 }
 
 async function openManualNfts() {
