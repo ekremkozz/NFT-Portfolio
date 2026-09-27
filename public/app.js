@@ -2758,17 +2758,11 @@ function paintPortfolioMove() {
       item.target = '_blank';
       item.rel = 'noopener noreferrer';
     }
-    item.className = `pf-move-item ${move.change > 0 ? 'is-up' : 'is-down'}`;
-    const pic = document.createElement('i');
-    pic.className = 'pf-history-pic';
+    // Its picture, ringed in its direction's colour; name and amount on hover.
+    item.className = `pf-move-pic ${move.change > 0 ? 'is-up' : 'is-down'}`;
+    item.title = `${move.name}  ${signed(move.change)}`;
     const image = pictureOf.get(move.name);
-    pic.appendChild(image ? stillImage(image, 18, '') : initialsPicture(move.name));
-    const name = document.createElement('span');
-    name.className = 'pf-move-name';
-    name.textContent = move.name;
-    const amount = document.createElement('b');
-    amount.textContent = signed(move.change);
-    item.append(pic, name, amount);
+    item.appendChild(image ? stillImage(image, 30, '') : initialsPicture(move.name));
     box.appendChild(item);
   }
 }
@@ -2780,7 +2774,7 @@ function notePortfolioMove(event) {
     // What led the move (the biggest the same way), then the next two either way.
     const top = (event.moves || []).find((m) => Math.sign(m.change) === Math.sign(event.net)) || null;
     const others = (event.moves || []).filter((m) => m !== top)
-      .sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 2);
+      .sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
     portfolioMove = { net: event.net, moves: [top, ...others].filter(Boolean), since: event.since };
   }
   paintPortfolioMove();

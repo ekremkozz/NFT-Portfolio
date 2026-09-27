@@ -720,8 +720,7 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: 300px minma
 .pf-profile-bio { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pf-profile-bio:empty { display: none; }
 .pf-stat-parts { display: flex; align-items: baseline; gap: 16px; font-size: 12px; color: var(--muted); white-space: nowrap; }
-/* The parts at the card's right edge: the value and its split use the card's width. */
-.pf-stat-row .pf-stat-parts { margin-left: auto; }
+.pf-stat-row .pf-stat-parts { margin-left: 6px; }
 /* NFT and token as shares of the total: one bar, a colour each, and a dot
    of the same colour before each label. */
 .pf-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
@@ -744,7 +743,18 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: 300px minma
 .pf-stats .pf-moves { justify-content: center; gap: 3px; min-width: 0; }
 .pf-moves.is-up { border-color: rgba(52, 199, 123, .35); }
 .pf-moves.is-down { border-color: rgba(235, 87, 87, .35); }
-.pf-move-list { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 12px; min-height: 64px; }
+/* The collections that moved, pictures side by side: one line of them, as
+   many as fit (the rest wrap out of sight), name and amount on hover. */
+.pf-move-list { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; font-size: 12px; max-height: 30px; overflow: hidden; }
+.pf-move-pic {
+  flex: none; width: 30px; height: 30px; box-sizing: border-box; border-radius: 50%; overflow: hidden;
+  border: 2px solid var(--line); background: var(--panel-3); display: inline-flex;
+}
+.pf-move-pic.is-up { border-color: var(--green); }
+.pf-move-pic.is-down { border-color: var(--red); }
+.pf-move-pic canvas, .pf-move-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pf-move-pic .pf-initials { font-size: 10px; }
+a.pf-move-pic:hover { filter: brightness(1.15); }
 .pf-moves-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; min-height: 20px; }
 .pf-moves-head .pf-move-net:empty { display: none; }
 a.pf-move-item { cursor: pointer; text-decoration: none; }
