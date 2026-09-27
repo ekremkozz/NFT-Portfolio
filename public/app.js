@@ -45,6 +45,8 @@ const STRINGS = {
     upToDate: 'Up to date',
     support: 'Support',
     totalValue: 'Total value',
+    lastChange: 'Last change',
+    noMoveYet: 'No change since the last read',
     footer: 'Not affiliated with OpenSea. Reads the same data OpenSea\u2019s own site uses, which can change without notice.',
     settingsFirst: 'Add your wallets',
     settings: 'Settings',
@@ -136,6 +138,8 @@ const STRINGS = {
     upToDate: 'Güncel',
     support: 'Destek',
     totalValue: 'Toplam değer',
+    lastChange: 'Son değişim',
+    noMoveYet: 'Son okumadan beri değişim yok',
     footer: 'OpenSea ile bağlantısı yoktur. OpenSea\u2019nin kendi sitesinin kullandığı verileri okur; bu veriler haber verilmeden değişebilir.',
     settingsFirst: 'Cüzdanlarını ekle',
     settings: 'Ayarlar',
@@ -2691,18 +2695,24 @@ function paintPortfolioMove() {
     if (portfolioMove) nav.classList.add(portfolioMove.net > 0 ? 'is-up' : 'is-down');
   }
   /*
-   * Beside the balance, one panel: the net, then the collections that moved
-   * most, each with its picture and its own colour -- what led the move first.
+   * The last change, in its card: the net on top, then the collections that
+   * moved most, one per line, each with its picture and its own colour. The
+   * card wears the overall direction's colour.
    */
   const box = document.getElementById('portfolio-move');
   if (!box) return;
+  const card = document.getElementById('portfolio-moves');
   forgetPictures(box);
   box.textContent = '';
-  box.classList.remove('is-up', 'is-down');
-  box.classList.toggle('is-empty', !portfolioMove);
-  if (!portfolioMove) return;
-  // The whole panel wears the overall direction's colour.
-  box.classList.add(portfolioMove.net > 0 ? 'is-up' : 'is-down');
+  if (card) card.classList.remove('is-up', 'is-down');
+  if (!portfolioMove) {
+    const none = document.createElement('span');
+    none.className = 'pf-move-none';
+    none.textContent = t('noMoveYet');
+    box.appendChild(none);
+    return;
+  }
+  if (card) card.classList.add(portfolioMove.net > 0 ? 'is-up' : 'is-down');
   const net = document.createElement('span');
   net.className = `pf-move-net ${portfolioMove.net > 0 ? 'is-up' : 'is-down'}`;
   net.textContent = signed(portfolioMove.net);
@@ -2718,6 +2728,7 @@ function paintPortfolioMove() {
     const image = pictureOf.get(move.name);
     pic.appendChild(image ? stillImage(image, 18, '') : initialsPicture(move.name));
     const name = document.createElement('span');
+    name.className = 'pf-move-name';
     name.textContent = move.name;
     const amount = document.createElement('b');
     amount.textContent = signed(move.change);

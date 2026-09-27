@@ -681,7 +681,7 @@ section.tab[data-tab="portfolio"] .pf-layout { gap: var(--pf-gap); }
 /* The change pill stays on the value's line: wrapped under it, it made the
    Total card -- and the whole row of cards with it -- taller, pushing the
    tables down whenever the balance moved. Short of room, it trims its text. */
-section.tab[data-tab="portfolio"] .pf-stat-row { flex-wrap: nowrap; min-width: 0; }
+section.tab[data-tab="portfolio"] .pf-stat-row { flex-wrap: wrap; row-gap: 4px; min-width: 0; }
 section.tab[data-tab="portfolio"] .pf-stat-row .pf-stat-value { flex: none; }
 section.tab[data-tab="portfolio"] .pf-stat-row .move-pill {
   min-width: 0; overflow: hidden; text-overflow: ellipsis; display: block; line-height: 22px;
@@ -690,7 +690,9 @@ section.tab[data-tab="portfolio"] .pf-stat-row .move-pill {
    which have room to spare, give way. Without a pill all three are equal. */
 /* The profile on the left, the value beside it -- as wide as its figure and
    change pill need, the profile giving way. */
-section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: minmax(0, 1fr) minmax(max-content, 1fr); }
+/* Profile at a fixed width, the value taking what its figures need, the
+   last change beside it. */
+section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: 300px minmax(0, 1fr) minmax(230px, 280px); }
 .pf-stats .pf-profile { flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; }
 .pf-profile[hidden] { display: none; }
 .pf-profile-pic {
@@ -724,29 +726,27 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: minmax(0, 1
 /* The next biggest moves beside the pill; what does not fit is left out. */
 .pf-move-more { display: flex; gap: 6px; min-width: 0; overflow: hidden; font-size: 12px; }
 .pf-move-more .pf-history-move { flex: none; height: 24px; box-sizing: border-box; }
-/* The change as one panel, tinted by the overall direction: the net, then
-   what moved most, each on a tint of its own direction. */
-.pf-move-panel {
-  display: inline-flex; align-items: center; gap: 6px; height: 28px; box-sizing: border-box; max-width: 100%;
-  padding: 0 3px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-3);
-  font-size: 12px; white-space: nowrap; overflow: hidden;
-}
-.pf-move-panel.is-empty { display: none; }
-.pf-move-panel.is-up { background: rgba(52, 199, 123, .07); border-color: rgba(52, 199, 123, .35); }
-.pf-move-panel.is-down { background: rgba(235, 87, 87, .07); border-color: rgba(235, 87, 87, .35); }
+/* The last change, a card of its own, tinted by the overall direction: the
+   net on top, then what moved most, one per line, each on its own tint. */
+.pf-stats .pf-moves { justify-content: flex-start; gap: 6px; min-width: 0; }
+.pf-moves.is-up { border-color: rgba(52, 199, 123, .35); }
+.pf-moves.is-down { border-color: rgba(235, 87, 87, .35); }
+.pf-move-list { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; }
+.pf-move-none { color: var(--muted); font-size: 12px; }
 .pf-move-net {
-  flex: none; display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px;
-  font-family: var(--mono); font-weight: 700;
+  align-self: flex-start; display: inline-flex; align-items: center; height: 22px; padding: 0 9px;
+  border-radius: 999px; font-family: var(--mono); font-weight: 700; font-size: 12.5px;
 }
 .pf-move-net.is-up { color: var(--green); background: rgba(52, 199, 123, .16); }
 .pf-move-net.is-down { color: var(--red); background: rgba(235, 87, 87, .16); }
 .pf-move-item {
-  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px 0 3px;
-  border-radius: 999px; color: var(--text);
+  display: flex; align-items: center; gap: 7px; height: 22px; padding: 0 8px 0 3px; border-radius: 999px;
+  color: var(--text); min-width: 0;
 }
-.pf-move-item.is-up { background: rgba(52, 199, 123, .12); }
-.pf-move-item.is-down { background: rgba(235, 87, 87, .12); }
-.pf-move-item b { font-family: var(--mono); font-weight: 600; }
+.pf-move-item.is-up { background: rgba(52, 199, 123, .1); }
+.pf-move-item.is-down { background: rgba(235, 87, 87, .1); }
+.pf-move-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-move-item b { flex: none; font-family: var(--mono); font-weight: 600; }
 .pf-move-item.is-up b { color: var(--green); }
 .pf-move-item.is-down b { color: var(--red); }
 /* Initials standing in for a missing picture. */

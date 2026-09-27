@@ -62,7 +62,12 @@
                 <span class="pf-split-part is-nft" id="portfolio-split-nft"></span>
                 <span class="pf-split-part is-token" id="portfolio-split-token"></span>
               </div>
-              <div class="pf-stat-move"><span id="portfolio-move" class="pf-move-panel is-empty"></span></div>
+            </div>
+            <!-- The last change, a card of its own: the net on top, then what
+                 moved most, one per line. -->
+            <div class="pf-stat pf-moves" id="portfolio-moves">
+              <span class="pf-stat-label" data-i18n="lastChange">Last change</span>
+              <div id="portfolio-move" class="pf-move-list"></div>
             </div>
           </div>
           <!-- The controls as a fourth card beside the three figures: how old
