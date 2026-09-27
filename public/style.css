@@ -741,11 +741,11 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: 300px minma
 .pf-move-more .pf-history-move { flex: none; height: 24px; box-sizing: border-box; }
 /* The last change, a card of its own, tinted by the overall direction: the
    net on top, then what moved most, one per line, each on its own tint. */
-.pf-stats .pf-moves { justify-content: flex-start; gap: 6px; min-width: 0; }
+.pf-stats .pf-moves { justify-content: center; gap: 3px; min-width: 0; }
 .pf-moves.is-up { border-color: rgba(52, 199, 123, .35); }
 .pf-moves.is-down { border-color: rgba(235, 87, 87, .35); }
-.pf-move-list { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; }
-.pf-moves-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.pf-move-list { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 12px; min-height: 64px; }
+.pf-moves-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; min-height: 20px; }
 .pf-moves-head .pf-move-net:empty { display: none; }
 a.pf-move-item { cursor: pointer; text-decoration: none; }
 a.pf-move-item:hover .pf-move-name { color: var(--accent); }
@@ -754,13 +754,13 @@ a.pf-move-item:hover .pf-move-name { color: var(--accent); }
 .pf-row.is-glow, .pf-token.is-glow { animation: pf-glow 1.8s ease-out; }
 .pf-move-none { color: var(--muted); font-size: 12px; }
 .pf-move-net {
-  flex: none; display: inline-flex; align-items: center; height: 22px; padding: 0 9px;
+  flex: none; display: inline-flex; align-items: center; height: 20px; padding: 0 9px;
   border-radius: 999px; font-family: var(--mono); font-weight: 700; font-size: 12.5px;
 }
 .pf-move-net.is-up { color: var(--green); background: rgba(52, 199, 123, .16); }
 .pf-move-net.is-down { color: var(--red); background: rgba(235, 87, 87, .16); }
 .pf-move-item {
-  display: flex; align-items: center; gap: 7px; height: 22px; padding: 0 8px 0 3px; border-radius: 999px;
+  display: flex; align-items: center; gap: 7px; height: 20px; padding: 0 8px 0 2px; border-radius: 999px;
   color: var(--text); min-width: 0;
 }
 .pf-move-item.is-up { background: rgba(52, 199, 123, .1); }
