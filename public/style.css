@@ -693,7 +693,7 @@ section.tab[data-tab="portfolio"] .pf-stat-row .move-pill {
 /* Profile at a fixed width, the value taking what its figures need, the
    last change beside it. */
 section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: 300px minmax(0, 1fr) minmax(230px, 280px); }
-.pf-stats .pf-profile { flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; }
+.pf-stats .pf-profile { flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; overflow: hidden; }
 .pf-profile[hidden] { display: none; }
 .pf-profile-pic {
   flex: none; width: 48px; height: 48px; border-radius: 50%; overflow: hidden;
@@ -704,7 +704,7 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: 300px minma
 .pf-profile-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.35; }
 .pf-profile-name { font-size: 16px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
 .pf-profile-name:hover { color: var(--accent); }
-.pf-profile-address { font-family: var(--mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.pf-profile-address { font-family: var(--mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pf-profile-bio { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pf-profile-bio:empty { display: none; }
 .pf-stat-parts { display: flex; align-items: baseline; gap: 16px; font-size: 12px; color: var(--muted); white-space: nowrap; }
