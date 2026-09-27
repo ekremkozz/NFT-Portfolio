@@ -681,7 +681,11 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: minmax(0, 1
 .pf-profile-address { font-family: var(--mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
 .pf-profile-bio { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pf-profile-bio:empty { display: none; }
-.pf-stat-parts { display: flex; gap: 16px; font-size: 12px; color: var(--muted); }
+.pf-stat-parts { display: flex; align-items: baseline; gap: 16px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.pf-stat-row .pf-stat-parts { margin-left: 6px; }
+/* The change under the figures, on a line of its own; a long one trims. */
+.pf-stat-move { display: flex; min-width: 0; min-height: 22px; }
+.pf-stat-move .move-pill { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pf-stat-parts b { font-family: var(--mono); font-weight: 600; color: var(--text); margin-left: 4px; }
 
 /* A newer version is out: a small amber pill in the header. */
