@@ -1300,8 +1300,18 @@ server.on('error', (error) => {
 server.listen(PORT, HOST, () => {
   console.log('');
   console.log('  NFT Portfolio Lite is running.');
-  console.log(`  Open: http://localhost:${PORT}`);
-  console.log('  (In a Codespace, use the link in the Ports tab or the pop-up.)');
+  /*
+   * In a codespace, its own address, ready to click: the page the codespace
+   * opens by itself is often stopped by the browser's pop-up blocker.
+   */
+  const codespace = process.env.CODESPACE_NAME;
+  if (codespace) {
+    const domain = process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN || 'app.github.dev';
+    console.log(`  Open: https://${codespace}-${PORT}.${domain}`);
+    console.log('  (Ctrl+click the link. Only you, signed in to GitHub, can open it.)');
+  } else {
+    console.log(`  Open: http://localhost:${PORT}`);
+  }
   console.log('');
   checkForUpdate();
   /*
