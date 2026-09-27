@@ -66,6 +66,8 @@ const STRINGS = {
     couldNotFetch: 'Could not fetch: {e}',
     couldNotRead: 'Could not read the portfolio.',
     serverDown: 'Could not reach the local server: {e}',
+    asleepCodespace: 'The codespace is asleep, so the figures are not updating. Open it again to carry on; this page picks up by itself:',
+    asleepLocal: 'The app is not running, so the figures are not updating. Start it with npm start; this page picks up by itself.',
     noItemsSelected: 'No items visible in the selected wallets.',
     noItems: 'No items visible in these wallets.',
     noPieces: 'No pieces match.',
@@ -137,6 +139,8 @@ const STRINGS = {
     couldNotFetch: 'Alınamadı: {e}',
     couldNotRead: 'Portfolyo okunamadı.',
     serverDown: 'Yerel sunucuya ulaşılamadı: {e}',
+    asleepCodespace: 'Codespace uykuda, rakamlar güncellenmiyor. Devam etmek için codespace’i yeniden aç; sayfa kendiliğinden devam eder:',
+    asleepLocal: 'Uygulama çalışmıyor, rakamlar güncellenmiyor. npm start ile başlat; sayfa kendiliğinden devam eder.',
     noItemsSelected: 'Seçili cüzdanlarda görünen item yok.',
     noItems: 'Bu cüzdanlarda görünen item yok.',
     noPieces: 'Eşleşen item yok.',
@@ -230,6 +234,7 @@ function setLanguage(next) {
   if (typeof paintPortfolioUpdated === 'function') paintPortfolioUpdated();
   if (typeof paintUpdateNote === 'function') paintUpdateNote();
   if (typeof syncPortfolioChips === 'function') syncPortfolioChips();
+  if (appAsleep) showAppAsleep();
 }
 
 document.querySelectorAll('.lang-switch button').forEach((button) => {
@@ -243,8 +248,50 @@ async function api(path, options = {}) {
     headers: { 'content-type': 'application/json', ...(options.headers || {}) },
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+  if (!response.ok) {
+    const error = new Error(body.error || `HTTP ${response.status}`);
+    // No answer of the app's own: something in front of it answered instead.
+    error.appGone = !body.error && [404, 502, 503, 504].includes(response.status);
+    throw error;
+  }
   return body;
+}
+
+/*
+ * The app is not there to answer: in a codespace, GitHub stops it after
+ * half an hour with no terminal activity -- which is what keeps it from
+ * using up the monthly hours -- and its address then answers 404. The page
+ * says so plainly, keeps the last figures, and stops asking every half
+ * minute; it tries again when looked at, and every few minutes meanwhile.
+ */
+const IN_CODESPACE = location.hostname.endsWith('.app.github.dev');
+let appAsleep = false;
+let appAsleepTriedAt = 0;
+
+function isAppGone(error) {
+  return Boolean(error && (error.appGone || error instanceof TypeError));
+}
+
+function showAppAsleep() {
+  appAsleep = true;
+  appAsleepTriedAt = Date.now();
+  const summary = $('#portfolio-summary');
+  summary.classList.add('is-asleep');
+  summary.textContent = IN_CODESPACE ? t('asleepCodespace') : t('asleepLocal');
+  if (IN_CODESPACE) {
+    const link = document.createElement('a');
+    link.href = 'https://github.com/codespaces';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'github.com/codespaces';
+    summary.append(' ', link);
+  }
+}
+
+function clearAppAsleep() {
+  if (!appAsleep) return;
+  appAsleep = false;
+  $('#portfolio-summary').classList.remove('is-asleep');
 }
 
 /** Dollars: sub-cent amounts still get a readable figure. */
@@ -609,11 +656,17 @@ async function loadPortfolio(force) {
   try {
     data = await api('/api/portfolio');
   } catch (error) {
-    summary.textContent = t('couldNotFetch', { e: error.message });
+    if (isAppGone(error)) {
+      showAppAsleep();
+    } else {
+      clearAppAsleep();
+      summary.textContent = t('couldNotFetch', { e: error.message });
+    }
     return;
   } finally {
     portfolioUpdating = false;
   }
+  clearAppAsleep();
   if (!data.available) {
     // No wallets yet: the setup opens instead of an error line.
     if (data.reason === 'no-wallets') {
@@ -2148,7 +2201,9 @@ function portfolioIsOnScreen() {
 setInterval(() => {
   // Nothing to renew before a wallet is saved, or while the settings are open.
   if (document.hidden || !settingsState.wallets.length || document.querySelector('.settings-modal')) return;
-  if (Date.now() - portfolioFetchedAt < PORTFOLIO_REFRESH_MS) return;
+  // Asleep: one try every few minutes, not one every half minute.
+  if (appAsleep && Date.now() - appAsleepTriedAt < PORTFOLIO_REFRESH_MS) return;
+  if (!appAsleep && Date.now() - portfolioFetchedAt < PORTFOLIO_REFRESH_MS) return;
   loadPortfolio(true);
 }, 30000);
 
@@ -2181,7 +2236,8 @@ setInterval(() => { if (portfolioIsOnScreen()) paintPortfolioUpdated(); }, 1000)
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || !settingsState.wallets.length || document.querySelector('.settings-modal')) return;
-  if (Date.now() - portfolioFetchedAt >= PORTFOLIO_REFRESH_MS) loadPortfolio(true);
+  // Looked at again: the app may be back -- a woken codespace -- so ask now.
+  if (appAsleep || Date.now() - portfolioFetchedAt >= PORTFOLIO_REFRESH_MS) loadPortfolio(true);
 });
 
 /*
@@ -2456,5 +2512,6 @@ loadSettings()
     else loadPortfolio();
   })
   .catch((error) => {
-    $('#portfolio-summary').textContent = t('serverDown', { e: error.message });
+    if (isAppGone(error)) showAppAsleep();
+    else $('#portfolio-summary').textContent = t('serverDown', { e: error.message });
   });

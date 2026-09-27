@@ -579,6 +579,10 @@ select:-webkit-autofill {
 .lite-link[hidden] { display: none; }
 .pf-error-line { display: block; margin: -4px 0 10px; color: var(--amber); font-size: 12.5px; }
 .pf-error-line:empty { display: none; }
+/* Asleep is not an error: said quietly, with the way back. */
+.pf-error-line.is-asleep { color: var(--muted); }
+.pf-error-line.is-asleep a { color: var(--accent); text-decoration: none; }
+.pf-error-line.is-asleep a:hover { text-decoration: underline; }
 
 /* Each piece's place in the pop-up's list, small in its top-right corner. */
 .pf-item-cell { position: relative; }
