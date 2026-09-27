@@ -740,15 +740,15 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: 300px minma
 .pf-move-more .pf-history-move { flex: none; height: 24px; box-sizing: border-box; }
 /* The last change, a card of its own, tinted by the overall direction: the
    net on top, then what moved most, one per line, each on its own tint. */
-.pf-stats .pf-moves { justify-content: center; gap: 3px; min-width: 0; }
+.pf-stats .pf-moves { justify-content: flex-start; gap: 6px; min-width: 0; }
 .pf-moves.is-up { border-color: rgba(52, 199, 123, .35); }
 .pf-moves.is-down { border-color: rgba(235, 87, 87, .35); }
 /* The collections that moved, pictures side by side: one line of them, as
    many as fit (the rest wrap out of sight), name and amount on hover. */
 .pf-move-list { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; font-size: 12px; max-height: 30px; overflow: hidden; }
 .pf-move-pic {
-  flex: none; width: 30px; height: 30px; box-sizing: border-box; border-radius: 50%; overflow: hidden;
-  border: 2px solid var(--line); background: var(--panel-3); display: inline-flex;
+  flex: none; width: 30px; height: 30px; box-sizing: border-box; border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--line); background: var(--panel-3); display: inline-flex;
 }
 .pf-move-pic.is-up { border-color: var(--green); }
 .pf-move-pic.is-down { border-color: var(--red); }
