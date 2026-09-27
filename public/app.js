@@ -382,7 +382,7 @@ function formatUsd(value) {
 function compactUsd(value) {
   if (!Number.isFinite(value) || Math.abs(value) < 100000) return formatUsd(value);
   if (Math.abs(value) >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
-  if (Math.abs(value) >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
+  if (Math.abs(value) >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
   return `$${(value / 1e3).toFixed(1)}K`;
 }
 
@@ -698,9 +698,20 @@ function filteredPortfolioTokens() {
 function renderPortfolioTotals() {
   const nftUsd = filteredPortfolioGroups().reduce((sum, g) => sum + (g.valueUsd || 0), 0);
   const tokenUsd = filteredPortfolioTokens().reduce((sum, t) => sum + (t.usd || 0), 0);
-  $('#portfolio-total').textContent = formatUsd(nftUsd + tokenUsd);
-  $('#portfolio-nft').textContent = formatUsd(nftUsd);
-  $('#portfolio-token').textContent = formatUsd(tokenUsd);
+  /*
+   * Large figures kept short, so a big portfolio does not widen the cards:
+   * from $100,000 the total drops its cents, and the two parts are written
+   * as $2.75M; the full amount shows on hover.
+   */
+  const total = $('#portfolio-total');
+  const sum = nftUsd + tokenUsd;
+  total.textContent = sum >= 100000 ? `$${Math.round(sum).toLocaleString('en-US')}` : formatUsd(sum);
+  total.title = sum >= 100000 ? formatUsd(sum) : '';
+  for (const [id, usd] of [['#portfolio-nft', nftUsd], ['#portfolio-token', tokenUsd]]) {
+    const el = $(id);
+    el.title = '';
+    setCompactUsd(el, usd);
+  }
   // Their shares, in the bar: a sliver stays visible for any part not nil.
   const whole = nftUsd + tokenUsd;
   const share = (usd) => (whole > 0 && usd > 0 ? Math.max((usd / whole) * 100, 1) : 0);
