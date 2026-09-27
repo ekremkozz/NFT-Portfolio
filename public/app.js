@@ -911,9 +911,12 @@ let portfolioTailOpen = (() => {
  * offer, opening that part first if it is folded. Shown only when there is
  * such a part.
  */
+let tailOpenedByJump = false;
+
 function jumpToUnvalued() {
   if (!portfolioTailOpen) {
     portfolioTailOpen = true;
+    tailOpenedByJump = true;
     try { localStorage.setItem(TAIL_OPEN_KEY, '1'); } catch { /* not kept */ }
     renderPortfolioCards();
   }
@@ -1516,6 +1519,7 @@ function portfolioRow(group) {
     divider.appendChild(caret);
     divider.addEventListener('click', () => {
       portfolioTailOpen = !portfolioTailOpen;
+      tailOpenedByJump = false;
       try { localStorage.setItem(TAIL_OPEN_KEY, portfolioTailOpen ? '1' : '0'); } catch { /* not kept */ }
       renderPortfolioCards();
     });
@@ -2100,7 +2104,16 @@ function attachScrollTop(scroller) {
   button.setAttribute('aria-label', t('backToTop'));
   button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"'
     + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
-  button.addEventListener('click', () => scroller.scrollTo({ top: 0, behavior: 'smooth' }));
+  button.addEventListener('click', () => {
+    // Back up from the no-offer part the jump button opened: it folds again.
+    if (scroller.id === 'portfolio-cards' && tailOpenedByJump && portfolioTailOpen) {
+      tailOpenedByJump = false;
+      portfolioTailOpen = false;
+      try { localStorage.setItem(TAIL_OPEN_KEY, '0'); } catch { /* not kept */ }
+      renderPortfolioCards();
+    }
+    scroller.scrollTo({ top: 0, behavior: 'smooth' });
+  });
   scroller.parentElement.appendChild(button);
   scroller.addEventListener('scroll', () => {
     button.classList.toggle('is-shown', scroller.scrollTop > 480);

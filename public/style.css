@@ -385,7 +385,7 @@ main.main:has(> section.tab[data-tab="portfolio"].is-active) { padding-bottom: 0
 /* The heading over the collections with no top offer: a row's height, so
    the windowed table keeps its arithmetic. */
 .pf-layout .pf-row.pf-divider, .pf-layout .pf-row.pf-divider:hover {
-  display: flex; align-items: center; gap: 10px; box-sizing: border-box; cursor: default;
+  display: flex; align-items: center; gap: 10px; box-sizing: border-box; cursor: pointer;
   background: rgba(255, 255, 255, .045); border-top: 1px solid rgba(255, 255, 255, .14);
   border-bottom: 1px solid rgba(255, 255, 255, .14);
 }
