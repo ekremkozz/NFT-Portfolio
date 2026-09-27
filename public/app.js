@@ -43,7 +43,9 @@ const STRINGS = {
     couldNotCheck: 'Could not check',
     updateAvailable: 'Update available',
     upToDate: 'Up to date',
-    support: 'Support',
+    support: 'Support me',
+    supportTip: 'Copies my address, {name}\n{address}',
+    supportCopied: 'Copied',
     totalValue: 'Total value',
     lastChange: 'Last change',
     noMoveYet: 'No change since the last read',
@@ -141,7 +143,9 @@ const STRINGS = {
     couldNotCheck: 'Kontrol edilemedi',
     updateAvailable: 'Güncelleme var',
     upToDate: 'Güncel',
-    support: 'Destek',
+    support: 'Destek ol',
+    supportTip: 'Adresimi kopyalar, {name}\n{address}',
+    supportCopied: 'Kopyalandı',
     totalValue: 'Toplam değer',
     lastChange: 'Son değişim',
     noMoveYet: 'Son okumadan beri değişim yok',
@@ -286,6 +290,7 @@ function setLanguage(next) {
   if (typeof syncPortfolioChips === 'function') syncPortfolioChips();
   if (appAsleep) showAppAsleep();
   if (typeof paintProfile === 'function') paintProfile();
+  if (typeof paintSupport === 'function') paintSupport();
 }
 
 document.querySelectorAll('.lang-switch button').forEach((button) => {
@@ -3173,11 +3178,37 @@ function paintProfile() {
  * The support mint. Empty until there is one; the header link appears as
  * soon as this is set.
  */
-const SUPPORT_URL = '';
-if (SUPPORT_URL) {
-  $('#support-link').href = SUPPORT_URL;
-  $('#support-link').hidden = false;
+/*
+ * Support: the button copies the author's address -- the address itself,
+ * which every wallet takes, with the name it goes by shown on hover. Nothing
+ * is sent anywhere; what to send, if anything, is the reader's to decide.
+ */
+const SUPPORT_NAME = 'ekremkoz.eth';
+const SUPPORT_ADDRESS = '0x25e0a64D77C66148784341Bb98ad7927c02C7926';
+
+function paintSupport() {
+  const button = $('#support-link');
+  button.title = t('supportTip', { name: SUPPORT_NAME, address: SUPPORT_ADDRESS });
 }
+paintSupport();
+
+$('#support-link').addEventListener('click', async () => {
+  const button = $('#support-link');
+  const label = button.querySelector('span');
+  try {
+    await navigator.clipboard.writeText(SUPPORT_ADDRESS);
+  } catch {
+    // No clipboard (an insecure address, say): the address is in the tip.
+    return;
+  }
+  label.textContent = t('supportCopied');
+  button.classList.add('is-done');
+  clearTimeout(button.doneTimer);
+  button.doneTimer = setTimeout(() => {
+    label.textContent = t('support');
+    button.classList.remove('is-done');
+  }, 1800);
+});
 
 $('#portfolio-settings').addEventListener('click', () => openSettings(false));
 

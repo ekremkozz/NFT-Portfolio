@@ -640,6 +640,9 @@ select:-webkit-autofill {
 .lite-link.is-support { color: #ff7aa2; border-color: rgba(255, 122, 162, .35); }
 .lite-link.is-support:hover { border-color: #ff7aa2; background: rgba(255, 122, 162, .1); color: #ff7aa2; }
 .lite-link[hidden] { display: none; }
+/* Wide enough for either label, so Copied does not shift the buttons beside it. */
+.lite-link.is-support { justify-content: center; min-width: 124px; }
+.lite-link.is-support.is-done { background: rgba(255, 122, 162, .14); border-color: #ff7aa2; }
 .pf-error-line { display: block; margin: -4px 0 10px; color: var(--amber); font-size: 12.5px; }
 .pf-error-line:empty { display: none; }
 /* Asleep is not an error: said quietly, with the way back. */

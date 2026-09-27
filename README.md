@@ -92,7 +92,7 @@ Everything the app keeps — your wallet list, NFTs added by hand, a week of pri
 
 ## Support
 
-If this saves you time, there is a support mint — *link coming soon*. It is a thank-you, not an investment: it grants nothing and promises nothing.
+If this saves you time, **Support me** at the top right copies my address: **ekremkoz.eth** (`0x25e0a64D77C66148784341Bb98ad7927c02C7926`). Anything is a thank-you; nothing is expected.
 
 ## License
 
@@ -171,5 +171,9 @@ Uygulamanın sakladığı her şey (cüzdan listen, elle eklenen NFT'ler, bir ha
 ### Önemli
 
 **OpenSea ile bağlantısı yoktur.** OpenSea'nin kendi sitesinin okuduğu verileri okur. Bunlar yayımlanmış bir API değildir: OpenSea onları her an değiştirebilir, değiştirdiğinde uygulama güncellenene kadar tablolar boş görünebilir. Değerler OpenSea'nin rakamlarıdır (en yüksek teklifler ve floor'lar), yatırım tavsiyesi değildir.
+
+### Destek
+
+İşine yaradıysa sağ üstteki **Destek ol** adresimi kopyalar: **ekremkoz.eth** (`0x25e0a64D77C66148784341Bb98ad7927c02C7926`). Ne gönderirsen teşekkürdür; hiçbir şey beklenmez.
 
 Bu uygulama **asla** private key ya da seed phrase istemez. İsteyen bir şey görürsen o bu uygulama değildir.
