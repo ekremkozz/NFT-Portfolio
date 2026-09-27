@@ -371,99 +371,178 @@ function flattenItem(item) {
 }
 
 /*
- * The whole item list, read to its end in the background.
+ * The whole item list, read in two parts.
  *
- * OpenSea hands the list out fifty at a time, most valuable first. Reading
- * only the first few pages left a large wallet's cheaper collections out --
- * one with 2,000 pieces showed 73 of a collection it held 111 of -- and the
- * counts crept up as more pages came in. Now the whole list is read once,
- * the page shows how far it has got, and after that:
+ * OpenSea hands the list out fifty at a time, highest top offer first, so
+ * every piece worth something comes before every piece that is not. The
+ * valued part is read first and on its own: it is the whole of the value,
+ * and a fraction of the list -- a wallet of 10,000 pieces had 2,650 with an
+ * offer, read in under a minute where the whole list took three, and a
+ * shorter read is also a steadier one (OpenSea's order shifts while it is
+ * read, and pieces fall between pages). After that:
  *
- *   - every refresh re-reads the first pages, where the value is, and
- *     updates those items in place (a few requests);
- *   - every half hour the whole list is read again, into a fresh copy that
+ *   - every refresh re-reads the first pages, where most of the value is,
+ *     and updates those pieces in place (a few requests);
+ *   - every half hour the valued part is read again, into a fresh copy that
  *     replaces the old one only when complete, so sold pieces drop out
- *     without the counts ever dipping while it runs.
+ *     without the counts ever dipping while it runs;
+ *   - the rest, the pieces with no offer, is read on from where the valued
+ *     part ended -- once at the start, then every six hours. The page shows
+ *     those collections under their own heading, below the rest.
  */
 const QUICK_PAGES = 4;
-const MAX_PAGES = 200;                 // 10,000 items
+const MAX_PAGES = 400;                 // 20,000 pieces, both parts together
 const FULL_EVERY_MS = 30 * 60 * 1000;
 const QUICK_EVERY_MS = 4 * 60 * 1000;
+const TAIL_EVERY_MS = 6 * 3600 * 1000;
 let crawl = null;
 
-async function readItemPages(addresses, maxPages, onItems) {
-  let cursor = null;
-  for (let page = 0; page < maxPages; page += 1) {
+const hasOffer = (item) => (item.offerUsd || 0) > 0;
+
+/*
+ * Pages from `cursor` on, each handed to onPage as flattened pieces, until
+ * the list ends, `maxPages` are read, or onPage says stop. Resolves to the
+ * cursor to go on from (null at the end) and the pages read.
+ */
+async function readItemPages(addresses, { cursor = null, maxPages, onPage }) {
+  let pages = 0;
+  while (pages < maxPages) {
     const chunk = await openSeaPortfolioPage(addresses, cursor);
-    onItems(chunk.items || []);
+    pages += 1;
     cursor = chunk.nextPageCursor || null;
-    if (!cursor) return true;
+    const stop = onPage((chunk.items || []).map(flattenItem));
+    if (!cursor || stop) break;
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  return false;
+  return { cursor, pages };
 }
 
-function startFullRead(state, addresses) {
+/*
+ * The valued part: pages until one with no offer on any piece. The order is
+ * by offer only roughly -- a few pieces without one turn up among the rest
+ * (measured: up to nine in a page of fifty, for some fifty pages) -- so a
+ * single such piece is no sign of the end; a whole page of them is. Those
+ * pieces start the rest, which is read on from there when it is due.
+ */
+function startValuedRead(state, addresses) {
   if (state.running) return;
-  const next = new Map();
+  const valued = new Map();
+  const seed = new Map();
   state.progress = 0;
   state.error = '';
-  state.running = readItemPages(addresses, MAX_PAGES, (items) => {
-    for (const item of items) if (!next.has(item.id)) next.set(item.id, flattenItem(item));
-    state.progress = next.size;
-    // The first read shows as it goes; later ones swap in when done.
-    if (!state.complete) state.items = next;
+  state.running = readItemPages(addresses, {
+    maxPages: MAX_PAGES,
+    onPage: (items) => {
+      for (const item of items) {
+        if (hasOffer(item)) valued.set(item.id, item);
+        else seed.set(item.id, item);
+      }
+      state.progress = valued.size;
+      // The first read shows as it goes; later ones swap in when done.
+      if (!state.complete) state.items = valued;
+      return items.length > 0 && !items.some(hasOffer);
+    },
   })
-    .then((reachedEnd) => {
-      state.items = next;
+    .then(({ cursor, pages }) => {
+      state.items = valued;
       state.complete = true;
-      state.reachedEnd = reachedEnd;
       state.fullAt = Date.now();
       state.quickAt = Date.now();
+      if (!state.tailAt || Date.now() - state.tailAt > TAIL_EVERY_MS) {
+        state.running = null;
+        startTailRead(state, addresses, cursor, seed, MAX_PAGES - pages);
+      }
     })
     .catch((error) => {
       state.error = error.message;
-      console.log(`  Items: full read stopped (${error.message})`);
+      console.log(`  Items: read stopped (${error.message})`);
+    })
+    .finally(() => { if (!state.tailRunning) state.running = null; });
+}
+
+/*
+ * The rest, the pieces with no offer, read on from where the valued part
+ * stopped. A piece that has an offer after all -- the order shifted while
+ * reading -- joins the valued part instead.
+ */
+function startTailRead(state, addresses, cursor, seed, pagesLeft) {
+  const tail = new Map(seed);
+  state.tailProgress = tail.size;
+  state.tailRunning = true;
+  const finish = () => {
+    state.tail = tail;
+    state.tailAt = Date.now();
+    state.tailRunning = false;
+  };
+  if (!cursor || pagesLeft <= 0) { finish(); return; }
+  state.running = readItemPages(addresses, {
+    cursor,
+    maxPages: pagesLeft,
+    onPage: (items) => {
+      for (const item of items) {
+        if (hasOffer(item)) state.items.set(item.id, item);
+        else tail.set(item.id, item);
+      }
+      state.tailProgress = tail.size;
+      // The first time, the rest shows as it comes in.
+      if (!state.tailAt) state.tail = tail;
+      return false;
+    },
+  })
+    .then(finish)
+    .catch((error) => {
+      state.tailRunning = false;
+      console.log(`  Items without an offer: read stopped (${error.message})`);
     })
     .finally(() => { state.running = null; });
 }
 
 async function quickRead(state, addresses) {
   const fresh = [];
-  await readItemPages(addresses, QUICK_PAGES, (items) => fresh.push(...items));
-  for (const item of fresh) state.items.set(item.id, flattenItem(item));
+  await readItemPages(addresses, { maxPages: QUICK_PAGES, onPage: (items) => { fresh.push(...items); return false; } });
+  // A piece whose offer went, or came, moves between the two parts.
+  for (const item of fresh) {
+    if (hasOffer(item)) { state.items.set(item.id, item); state.tail.delete(item.id); }
+    else { state.tail.set(item.id, item); state.items.delete(item.id); }
+  }
   state.quickAt = Date.now();
 }
 
 async function openSeaPortfolioItems(addresses, extraItems = []) {
   const key = addresses.join(',');
   if (!crawl || crawl.key !== key) {
-    crawl = { key, items: new Map(), complete: false, progress: 0, running: null, fullAt: 0, quickAt: 0, error: '' };
-    startFullRead(crawl, addresses);
+    crawl = {
+      key, items: new Map(), tail: new Map(), complete: false, progress: 0, running: null,
+      fullAt: 0, quickAt: 0, tailAt: 0, tailRunning: false, tailProgress: 0, error: '',
+    };
+    startValuedRead(crawl, addresses);
     // The first answer waits for the first few pages, not for all of them.
     const started = Date.now();
     while (!crawl.complete && !crawl.error && crawl.progress < QUICK_PAGES * 50 && Date.now() - started < 15000) {
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
   } else if (crawl.complete && !crawl.running) {
-    if (Date.now() - crawl.fullAt > FULL_EVERY_MS) startFullRead(crawl, addresses);
+    if (Date.now() - crawl.fullAt > FULL_EVERY_MS) startValuedRead(crawl, addresses);
     else if (Date.now() - crawl.quickAt > QUICK_EVERY_MS) await quickRead(crawl, addresses).catch(() => {});
   } else if (!crawl.complete && !crawl.running) {
     // A first read that failed part way is tried again.
-    startFullRead(crawl, addresses);
+    startValuedRead(crawl, addresses);
   }
 
-  const items = [...crawl.items.values()];
+  const items = [...crawl.items.values(), ...crawl.tail.values()];
   // The hand-added pieces join here, so they group and total like the rest.
   items.push(...(await extraItems));
 
   return {
     collections: groupByCollection(items),
     itemCount: items.length,
-    // Still reading the list: the page says how far, and the counts grow.
+    // Still reading the valued part: the page says how far, and the counts grow.
     loading: !crawl.complete,
     loaded: crawl.progress,
     complete: crawl.complete,
+    // The pieces with no offer, read after: the page marks their heading.
+    tailLoading: crawl.tailRunning,
+    tailLoaded: crawl.tailProgress,
     floorTotalUsd: items.reduce((sum, item) => sum + item.floorUsd, 0),
     offerTotalUsd: items.reduce((sum, item) => sum + item.offerUsd, 0),
   };
@@ -1049,6 +1128,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, {
         loading: Boolean(crawl && !crawl.complete),
         loaded: crawl ? crawl.progress : 0,
+        tailLoading: Boolean(crawl && crawl.tailRunning),
       });
     }
 

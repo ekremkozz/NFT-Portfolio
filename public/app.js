@@ -73,6 +73,8 @@ const STRINGS = {
     noPieces: 'No pieces match.',
     searchPieces: 'Search name or #',
     searchCollections: 'Search collections',
+    noOfferHead: 'No top offer · {n} collections',
+    tailReading: 'Reading…',
     searchTokens: 'Search tokens',
     noMatch: 'Nothing matches the search.',
     all: 'All',
@@ -157,6 +159,8 @@ const STRINGS = {
     noPieces: 'Eşleşen item yok.',
     searchPieces: 'İsim ya da # ara',
     searchCollections: 'Koleksiyon ara',
+    noOfferHead: 'Teklifi olmayan koleksiyonlar · {n}',
+    tailReading: 'Okunuyor…',
     searchTokens: 'Token ara',
     noMatch: 'Aramayla eşleşen yok.',
     all: 'Tümü',
@@ -786,8 +790,10 @@ async function loadPortfolio(force) {
    * progress, and the tables catch up now and then until it is done.
    */
   portfolioItemsLoading = data.loading ? (data.loaded || 0) : 0;
+  portfolioTailLoading = Boolean(data.tailLoading);
   clearTimeout(portfolioLoadingTimer);
   if (data.loading) watchItemRead();
+  else if (portfolioTailLoading) watchTailRead();
 
   /*
    * Tokens that could not be read this time: the last list stays rather than
@@ -847,6 +853,26 @@ function watchItemRead() {
     portfolioLoadingTimer = setTimeout(tick, READ_STATUS_MS);
   };
   portfolioLoadingTimer = setTimeout(tick, READ_STATUS_MS);
+}
+
+/*
+ * The pieces with no offer, read after the rest: a quiet look every twenty
+ * seconds, and the table once more when they are all in.
+ */
+let portfolioTailLoading = false;
+const TAIL_STATUS_MS = 20000;
+
+function watchTailRead() {
+  const tick = async () => {
+    let status = null;
+    try { status = await api('/api/portfolio/status'); } catch { /* asked again later */ }
+    if (status && !status.tailLoading) {
+      loadPortfolio(true);
+      return;
+    }
+    portfolioLoadingTimer = setTimeout(tick, TAIL_STATUS_MS);
+  };
+  portfolioLoadingTimer = setTimeout(tick, TAIL_STATUS_MS);
 }
 
 /** Cards, tokens and the headline always move together. */
@@ -912,11 +938,25 @@ function renderPortfolioCards() {
   paintPortfolioSort();
 
   const valueOf = PORTFOLIO_SORT_VALUE[portfolioSort.key] || PORTFOLIO_SORT_VALUE.value;
-  const groups = filteredPortfolioGroups()
-    .filter((group) => searchMatch(tableSearch.collections, group.name, group.slug))
-    .sort((a, b) => portfolioSort.dir * (valueOf(a) - valueOf(b)));
+  const byChoice = (a, b) => portfolioSort.dir * (valueOf(a) - valueOf(b));
+  /*
+   * Two parts: the collections with a top offer -- all of the value -- and
+   * under a heading of their own, those without one, which the server reads
+   * after. Each part sorts on its own; the ones without an offer, all worth
+   * nothing by the offer, fall back to their floor.
+   */
+  const shown = filteredPortfolioGroups()
+    .filter((group) => searchMatch(tableSearch.collections, group.name, group.slug));
+  const valued = shown.filter((group) => group.offerUsd > 0 || (group.items || []).some((item) => item.manual))
+    .sort(byChoice);
+  const floorOf = (group) => (group.floorUsd || 0) * (group.items || []).length;
+  const unvalued = shown.filter((group) => !valued.includes(group))
+    .sort((a, b) => byChoice(a, b) || floorOf(b) - floorOf(a));
+  const groups = unvalued.length || portfolioTailLoading
+    ? [...valued, { divider: true, count: unvalued.length }, ...unvalued]
+    : valued;
   forgetPictures(rows);
-  if (!groups.length) {
+  if (!shown.length) {
     rows.innerHTML = tableSearch.collections ? `<div class="empty-sub">${t('noMatch')}</div>`
       : portfolioFilter.size
       ? `<div class="empty-sub">${t('noItemsSelected')}</div>`
@@ -1390,6 +1430,21 @@ function walletPill(address) {
 }
 
 function portfolioRow(group) {
+  // The heading between the two parts, a row's height like the rest.
+  if (group.divider) {
+    const divider = document.createElement('div');
+    divider.className = 'pf-row pf-divider';
+    const label = document.createElement('span');
+    label.textContent = t('noOfferHead', { n: group.count.toLocaleString('en-US') });
+    divider.appendChild(label);
+    if (portfolioTailLoading) {
+      const reading = document.createElement('span');
+      reading.className = 'pf-divider-note';
+      reading.textContent = t('tailReading');
+      divider.appendChild(reading);
+    }
+    return divider;
+  }
   const row = document.createElement('div');
   row.className = 'pf-row';
 
