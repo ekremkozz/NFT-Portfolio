@@ -115,7 +115,15 @@
              sorts by its numbers, the tokens in a column beside it. -->
         <div class="pf-layout">
           <div class="pf-main">
-            <input id="pf-search-collections" class="pf-table-search" data-i18n-placeholder="searchCollections" type="search" autocomplete="off" spellcheck="false">
+            <div class="pf-search-row">
+              <input id="pf-search-collections" class="pf-table-search" data-i18n-placeholder="searchCollections" type="search" autocomplete="off" spellcheck="false">
+              <button id="pf-jump-unvalued" class="btn btn-mini is-icon pf-jump" type="button" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path>
+                </svg>
+              </button>
+            </div>
             <div class="pf-head" lang="en">
               <span class="pf-col-name">Collection</span>
               <span class="pf-chain-col">Network</span>

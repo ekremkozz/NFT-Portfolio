@@ -75,6 +75,7 @@ const STRINGS = {
     searchCollections: 'Search collections',
     noOfferHead: 'Collections with no top offer',
     tailReading: 'Reading…',
+    jumpUnvalued: 'Go to collections with no top offer',
     searchTokens: 'Search tokens',
     noMatch: 'Nothing matches the search.',
     all: 'All',
@@ -163,6 +164,7 @@ const STRINGS = {
     searchCollections: 'Koleksiyon ara',
     noOfferHead: 'Teklifi olmayan koleksiyonlar',
     tailReading: 'Okunuyor…',
+    jumpUnvalued: 'Teklifi olmayan koleksiyonlara git',
     searchTokens: 'Token ara',
     noMatch: 'Aramayla eşleşen yok.',
     all: 'Tümü',
@@ -903,6 +905,23 @@ const TAIL_OPEN_KEY = 'nftPortfolio.tailOpen';
 let portfolioTailOpen = (() => {
   try { return localStorage.getItem(TAIL_OPEN_KEY) === '1'; } catch { return false; }
 })();
+
+/*
+ * The button beside the collection search: down to the collections with no
+ * offer, opening that part first if it is folded. Shown only when there is
+ * such a part.
+ */
+function jumpToUnvalued() {
+  if (!portfolioTailOpen) {
+    portfolioTailOpen = true;
+    try { localStorage.setItem(TAIL_OPEN_KEY, '1'); } catch { /* not kept */ }
+    renderPortfolioCards();
+  }
+  const at = tableWindow.groups.findIndex((group) => group.divider);
+  if (at < 0) return;
+  $('#portfolio-cards').scrollTo({ top: at * tableWindow.rowHeight, behavior: 'smooth' });
+}
+$('#pf-jump-unvalued')?.addEventListener('click', jumpToUnvalued);
 let portfolioTailLoaded = 0;
 let portfolioTailNextAt = 0;
 const TAIL_STATUS_MS = 20000;
@@ -1004,6 +1023,13 @@ function renderPortfolioCards() {
   const groups = unvalued.length || portfolioTailLoading
     ? [...valued, { divider: true, count: unvalued.length, open: tailOpen }, ...(tailOpen ? unvalued : [])]
     : valued;
+  // The jump button shows while there is a part without an offer to go to.
+  const jump = $('#pf-jump-unvalued');
+  if (jump) {
+    jump.hidden = !groups.some((group) => group.divider);
+    jump.title = t('jumpUnvalued');
+    jump.setAttribute('aria-label', t('jumpUnvalued'));
+  }
   forgetPictures(rows);
   if (!shown.length) {
     rows.innerHTML = tableSearch.collections ? `<div class="empty-sub">${t('noMatch')}</div>`

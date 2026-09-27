@@ -817,6 +817,12 @@ body.single-wallet .pf-tok-head, body.single-wallet .pf-token { grid-template-co
 .pf-token-change { font-size: 11.5px; font-weight: 500; white-space: nowrap; }
 .pf-token-change:not(.tok-up):not(.tok-down) { color: var(--muted); }
 
+/* The collection search and, beside it, the jump to the no-offer part. */
+.pf-search-row { flex: none; display: flex; align-items: center; gap: 8px; margin: 12px 2px 4px; }
+.pf-search-row .pf-table-search { flex: 1; min-width: 0; margin: 0; }
+.pf-jump { flex: none; width: 32px; height: 32px; }
+.pf-jump[hidden] { display: none; }
+.pf-jump svg { width: 16px; height: 16px; }
 /* Narrow: the header's cards one under the other, each the full width. */
 @media (max-width: 1000px) {
   section.tab[data-tab="portfolio"] .pf-top { flex-direction: column; }
