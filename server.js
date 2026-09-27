@@ -418,11 +418,32 @@ async function readItemPages(addresses, { cursor = null, maxPages, onPage }) {
 }
 
 /*
+ * A fresh read laid over the last. OpenSea orders the list by top offer, and
+ * a collection whose offer moves while the list is read moves as a block --
+ * past the page being read, so the read never sees it: measured, 85 of 111
+ * pieces of one collection gone from a read. So a piece missing from one
+ * read stays, marked; only missing from two in a row is it dropped. A piece
+ * sold shows for one read too long; none goes missing for a read.
+ */
+function mergeRead(previous, fresh) {
+  const merged = new Map();
+  for (const [id, item] of fresh) merged.set(id, { ...item, missed: 0 });
+  for (const [id, item] of previous) {
+    if (!merged.has(id) && !(item.missed >= 1)) merged.set(id, { ...item, missed: 1 });
+  }
+  return merged;
+}
+
+/*
  * The valued part: pages until one with no offer on any piece. The order is
  * by offer only roughly -- a few pieces without one turn up among the rest
  * (measured: up to nine in a page of fifty, for some fifty pages) -- so a
  * single such piece is no sign of the end; a whole page of them is. Those
  * pieces start the rest, which is read on from there when it is due.
+ *
+ * The very first read is followed at once by a second, laid over it: with
+ * nothing earlier to fall back on, a first read that missed a collection
+ * would otherwise show it short for half an hour.
  */
 function startValuedRead(state, addresses) {
   if (state.running) return;
@@ -430,7 +451,7 @@ function startValuedRead(state, addresses) {
   const seed = new Map();
   state.progress = 0;
   state.error = '';
-  state.running = readItemPages(addresses, {
+  const run = readItemPages(addresses, {
     maxPages: MAX_PAGES,
     onPage: (items) => {
       for (const item of items) {
@@ -444,12 +465,17 @@ function startValuedRead(state, addresses) {
     },
   })
     .then(({ cursor, pages }) => {
-      state.items = valued;
+      state.items = state.complete ? mergeRead(state.items, valued) : valued;
       state.complete = true;
+      state.passes = (state.passes || 0) + 1;
       state.fullAt = Date.now();
       state.quickAt = Date.now();
+      state.running = null;
+      if (state.passes === 1) {
+        startValuedRead(state, addresses);
+        return;
+      }
       if (!state.tailAt || Date.now() - state.tailAt > TAIL_EVERY_MS) {
-        state.running = null;
         startTailRead(state, addresses, cursor, seed, MAX_PAGES - pages);
       }
     })
@@ -457,7 +483,8 @@ function startValuedRead(state, addresses) {
       state.error = error.message;
       console.log(`  Items: read stopped (${error.message})`);
     })
-    .finally(() => { if (!state.tailRunning) state.running = null; });
+    .finally(() => { if (state.running === run) state.running = null; });
+  state.running = run;
 }
 
 /*
@@ -470,12 +497,12 @@ function startTailRead(state, addresses, cursor, seed, pagesLeft) {
   state.tailProgress = tail.size;
   state.tailRunning = true;
   const finish = () => {
-    state.tail = tail;
+    state.tail = state.tailAt ? mergeRead(state.tail, tail) : tail;
     state.tailAt = Date.now();
     state.tailRunning = false;
   };
   if (!cursor || pagesLeft <= 0) { finish(); return; }
-  state.running = readItemPages(addresses, {
+  const run = readItemPages(addresses, {
     cursor,
     maxPages: pagesLeft,
     onPage: (items) => {
@@ -494,7 +521,8 @@ function startTailRead(state, addresses, cursor, seed, pagesLeft) {
       state.tailRunning = false;
       console.log(`  Items without an offer: read stopped (${error.message})`);
     })
-    .finally(() => { state.running = null; });
+    .finally(() => { if (state.running === run) state.running = null; });
+  state.running = run;
 }
 
 async function quickRead(state, addresses) {
@@ -529,7 +557,13 @@ async function openSeaPortfolioItems(addresses, extraItems = []) {
     startValuedRead(crawl, addresses);
   }
 
-  const items = [...crawl.items.values(), ...crawl.tail.values()];
+  // One entry a piece: one seen in both parts counts once, the fresher one.
+  const all = new Map(crawl.items);
+  for (const [id, item] of crawl.tail) {
+    const other = all.get(id);
+    if (!other || (item.missed || 0) <= (other.missed || 0)) all.set(id, item);
+  }
+  const items = [...all.values()];
   // The hand-added pieces join here, so they group and total like the rest.
   items.push(...(await extraItems));
 
@@ -543,6 +577,8 @@ async function openSeaPortfolioItems(addresses, extraItems = []) {
     // The pieces with no offer, read after: the page marks their heading.
     tailLoading: crawl.tailRunning,
     tailLoaded: crawl.tailProgress,
+    // When the no-offer part is next due; the page shows it on their heading.
+    tailNextAt: crawl.tailAt ? crawl.tailAt + TAIL_EVERY_MS : 0,
     floorTotalUsd: items.reduce((sum, item) => sum + item.floorUsd, 0),
     offerTotalUsd: items.reduce((sum, item) => sum + item.offerUsd, 0),
   };
@@ -1129,6 +1165,7 @@ const server = http.createServer(async (req, res) => {
         loading: Boolean(crawl && !crawl.complete),
         loaded: crawl ? crawl.progress : 0,
         tailLoading: Boolean(crawl && crawl.tailRunning),
+        tailLoaded: crawl ? crawl.tailProgress : 0,
       });
     }
 

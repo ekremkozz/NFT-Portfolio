@@ -106,7 +106,9 @@ const STRINGS = {
     needKey: 'Adding NFTs by hand needs an OpenSea API key.',
     addInSettings: 'Add it in settings',
     addedByHand: 'Added by hand',
-    readingItems: 'Reading items… {n}',
+    readingItems: 'Reading valued items… {n}',
+    readingTail: 'Reading items with no offer… {n}',
+    tailNext: 'Next read {time}',
     updating: 'Updating…',
     updatedAgo: 'Updated <b>{age}</b> ago <i>· every {m}m</i>',
     ageSec: '{n}s',
@@ -192,7 +194,9 @@ const STRINGS = {
     needKey: 'Elle NFT eklemek için OpenSea API anahtarı gerekir.',
     addInSettings: 'Ayarlardan ekle',
     addedByHand: 'Elle eklenenler',
-    readingItems: 'Itemler okunuyor… {n}',
+    readingItems: 'Değerli itemler okunuyor… {n}',
+    readingTail: 'Teklifsiz itemler okunuyor… {n}',
+    tailNext: 'Sonraki okuma {time}',
     updating: 'Güncelleniyor…',
     updatedAgo: '<b>{age}</b> önce güncellendi <i>· {m} dk\u2019da bir</i>',
     ageSec: '{n} sn',
@@ -328,6 +332,24 @@ function formatUsd(value) {
   if (value < 1) return '$' + value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
   // Thousands grouped: $53,110.98, not $53110.98.
   return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/*
+ * In the tables, $100,000 and up written short, as OpenSea does: $268.9K,
+ * $1.2M. The headline cards above keep the full figure.
+ */
+function compactUsd(value) {
+  if (!Number.isFinite(value) || Math.abs(value) < 100000) return formatUsd(value);
+  if (Math.abs(value) >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
+  if (Math.abs(value) >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
+  return `$${(value / 1e3).toFixed(1)}K`;
+}
+
+/* A cell's text in short, with the full amount on hover when it was cut. */
+function setCompactUsd(el, value) {
+  const short = compactUsd(value);
+  el.textContent = short;
+  if (short !== formatUsd(value)) el.title = formatUsd(value);
 }
 
 /* The short names given to wallets in the settings, by address. */
@@ -791,6 +813,8 @@ async function loadPortfolio(force) {
    */
   portfolioItemsLoading = data.loading ? (data.loaded || 0) : 0;
   portfolioTailLoading = Boolean(data.tailLoading);
+  portfolioTailLoaded = data.tailLoaded || 0;
+  portfolioTailNextAt = data.tailNextAt || 0;
   clearTimeout(portfolioLoadingTimer);
   if (data.loading) watchItemRead();
   else if (portfolioTailLoading) watchTailRead();
@@ -860,6 +884,13 @@ function watchItemRead() {
  * seconds, and the table once more when they are all in.
  */
 let portfolioTailLoading = false;
+// The no-offer part starts folded: nothing in it adds to the value.
+const TAIL_OPEN_KEY = 'nftPortfolio.tailOpen';
+let portfolioTailOpen = (() => {
+  try { return localStorage.getItem(TAIL_OPEN_KEY) === '1'; } catch { return false; }
+})();
+let portfolioTailLoaded = 0;
+let portfolioTailNextAt = 0;
 const TAIL_STATUS_MS = 20000;
 
 function watchTailRead() {
@@ -870,6 +901,8 @@ function watchTailRead() {
       loadPortfolio(true);
       return;
     }
+    if (status) portfolioTailLoaded = status.tailLoaded || portfolioTailLoaded;
+    paintPortfolioUpdated();
     portfolioLoadingTimer = setTimeout(tick, TAIL_STATUS_MS);
   };
   portfolioLoadingTimer = setTimeout(tick, TAIL_STATUS_MS);
@@ -952,8 +985,10 @@ function renderPortfolioCards() {
   const floorOf = (group) => (group.floorUsd || 0) * (group.items || []).length;
   const unvalued = shown.filter((group) => !valued.includes(group))
     .sort((a, b) => byChoice(a, b) || floorOf(b) - floorOf(a));
+  // Folded unless opened, or unless a search is looking for something.
+  const tailOpen = portfolioTailOpen || Boolean(tableSearch.collections);
   const groups = unvalued.length || portfolioTailLoading
-    ? [...valued, { divider: true, count: unvalued.length }, ...unvalued]
+    ? [...valued, { divider: true, count: unvalued.length, open: tailOpen }, ...(tailOpen ? unvalued : [])]
     : valued;
   forgetPictures(rows);
   if (!shown.length) {
@@ -1434,6 +1469,16 @@ function portfolioRow(group) {
   if (group.divider) {
     const divider = document.createElement('div');
     divider.className = 'pf-row pf-divider';
+    // A click opens or folds the part; the caret says which.
+    const caret = document.createElement('span');
+    caret.className = `pf-divider-caret${group.open ? ' is-open' : ''}`;
+    caret.textContent = '▸';
+    divider.appendChild(caret);
+    divider.addEventListener('click', () => {
+      portfolioTailOpen = !portfolioTailOpen;
+      try { localStorage.setItem(TAIL_OPEN_KEY, portfolioTailOpen ? '1' : '0'); } catch { /* not kept */ }
+      renderPortfolioCards();
+    });
     const label = document.createElement('span');
     label.className = 'pf-divider-title';
     label.textContent = t('noOfferHead');
@@ -1450,6 +1495,14 @@ function portfolioRow(group) {
       reading.className = 'pf-divider-note';
       reading.textContent = t('tailReading');
       divider.appendChild(reading);
+    } else if (portfolioTailNextAt) {
+      // Read every six hours: when next, as a time of day, so it never goes stale.
+      const next = document.createElement('span');
+      next.className = 'pf-divider-note is-quiet';
+      const at = new Date(portfolioTailNextAt);
+      const time = at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      next.textContent = t('tailNext', { time });
+      divider.appendChild(next);
     }
     return divider;
   }
@@ -1517,7 +1570,8 @@ function portfolioRow(group) {
   const money = (usd) => {
     const cell = document.createElement('div');
     cell.className = 'pf-num pf-money';
-    cell.textContent = usd ? formatUsd(usd) : '—';
+    if (usd) setCompactUsd(cell, usd);
+    else cell.textContent = '—';
     return cell;
   };
   const value = money(group.valueUsd);
@@ -1534,7 +1588,7 @@ function portfolioRow(group) {
   offer.className = 'pf-offer';
   if (group.offerUsd) {
     const share = group.floorUsd ? Math.round((group.offerUsd / group.floorUsd) * 100) : 0;
-    offer.textContent = formatUsd(group.offerUsd);
+    setCompactUsd(offer, group.offerUsd);
     offer.classList.toggle('is-low', Boolean(share) && share < 75);
   } else {
     offer.textContent = '—';
@@ -1647,7 +1701,8 @@ function tokenFigures(token) {
     el.textContent = text;
     return el;
   };
-  const value = cell(formatUsd(token.usd), 'pf-money is-value');
+  const value = cell('', 'pf-money is-value');
+  setCompactUsd(value, token.usd);
 
   const wallets = document.createElement('div');
   wallets.className = 'pf-wallets-col';
@@ -2468,6 +2523,10 @@ function paintPortfolioUpdated() {
   if (!label) return;
   if (portfolioItemsLoading) {
     label.textContent = t('readingItems', { n: portfolioItemsLoading.toLocaleString('en-US') });
+    return;
+  }
+  if (portfolioTailLoading) {
+    label.textContent = t('readingTail', { n: portfolioTailLoaded.toLocaleString('en-US') });
     return;
   }
   if (portfolioUpdating) {
