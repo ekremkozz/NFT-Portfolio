@@ -494,6 +494,8 @@ function showTip(host, pointer) {
   const detail = document.createElement('i');
   detail.textContent = body;
   tipEl.appendChild(detail);
+  // A tip can carry a direction: its detail line then takes that colour.
+  tipEl.dataset.tone = host.dataset.tipTone || '';
   tipEl.classList.add('is-on');
   placeTip(host, pointer);
 }
@@ -2760,7 +2762,10 @@ function paintPortfolioMove() {
     }
     // Its picture, ringed in its direction's colour; name and amount on hover.
     item.className = `pf-move-pic ${move.change > 0 ? 'is-up' : 'is-down'}`;
-    item.title = `${move.name}  ${signed(move.change)}`;
+    // The tip: the name as its heading, the amount under it in its colour.
+    item.title = `${move.name}\n${signed(move.change)}`;
+    item.dataset.tipTone = move.change > 0 ? 'up' : 'down';
+    item.setAttribute('aria-label', move.name);
     const image = pictureOf.get(move.name);
     item.appendChild(image ? stillImage(image, 30, '') : initialsPicture(move.name));
     box.appendChild(item);
