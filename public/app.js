@@ -661,6 +661,18 @@ function renderPortfolioTotals() {
   $('#portfolio-total').textContent = formatUsd(nftUsd + tokenUsd);
   $('#portfolio-nft').textContent = formatUsd(nftUsd);
   $('#portfolio-token').textContent = formatUsd(tokenUsd);
+  // Their shares, in the bar: a sliver stays visible for any part not nil.
+  const whole = nftUsd + tokenUsd;
+  const share = (usd) => (whole > 0 && usd > 0 ? Math.max((usd / whole) * 100, 1) : 0);
+  const split = $('#portfolio-split');
+  if (split) {
+    split.classList.toggle('is-empty', !(whole > 0));
+    $('#portfolio-split-nft').style.flexGrow = String(share(nftUsd));
+    $('#portfolio-split-token').style.flexGrow = String(share(tokenUsd));
+    split.title = whole > 0
+      ? `NFT ${Math.round((nftUsd / whole) * 100)}% · Token ${Math.round((tokenUsd / whole) * 100)}%`
+      : '';
+  }
 }
 
 function syncPortfolioChips() {

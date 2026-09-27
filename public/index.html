@@ -53,9 +53,14 @@
               <div class="pf-stat-row">
                 <b id="portfolio-total" class="pf-stat-value">—</b>
                 <div class="pf-stat-parts">
-                  <span>NFT <b id="portfolio-nft">—</b></span>
-                  <span>Token <b id="portfolio-token">—</b></span>
+                  <span><i class="pf-dot is-nft"></i>NFT <b id="portfolio-nft">—</b></span>
+                  <span><i class="pf-dot is-token"></i>Token <b id="portfolio-token">—</b></span>
                 </div>
+              </div>
+              <!-- The same two parts as shares of the whole, in one bar. -->
+              <div class="pf-split" id="portfolio-split">
+                <span class="pf-split-part is-nft" id="portfolio-split-nft"></span>
+                <span class="pf-split-part is-token" id="portfolio-split-token"></span>
               </div>
               <div class="pf-stat-move"><span id="portfolio-move" class="move-pill"></span></div>
             </div>

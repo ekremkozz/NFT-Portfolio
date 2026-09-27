@@ -575,7 +575,8 @@ async function openSeaPortfolioItems(addresses, extraItems = []) {
     loaded: crawl.progress,
     complete: crawl.complete,
     // The pieces with no offer, read after: the page marks their heading.
-    tailLoading: crawl.tailRunning,
+    // Pending counts too -- the valued part is read twice before they start.
+    tailLoading: crawl.tailRunning || (crawl.complete && !crawl.tailAt),
     tailLoaded: crawl.tailProgress,
     // When the no-offer part is next due; the page shows it on their heading.
     tailNextAt: crawl.tailAt ? crawl.tailAt + TAIL_EVERY_MS : 0,
@@ -1227,7 +1228,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, {
         loading: Boolean(crawl && !crawl.complete),
         loaded: crawl ? crawl.progress : 0,
-        tailLoading: Boolean(crawl && crawl.tailRunning),
+        tailLoading: Boolean(crawl && (crawl.tailRunning || (crawl.complete && !crawl.tailAt))),
         tailLoaded: crawl ? crawl.tailProgress : 0,
       });
     }

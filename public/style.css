@@ -683,6 +683,17 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: minmax(0, 1
 .pf-profile-bio:empty { display: none; }
 .pf-stat-parts { display: flex; align-items: baseline; gap: 16px; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .pf-stat-row .pf-stat-parts { margin-left: 6px; }
+/* NFT and token as shares of the total: one bar, a colour each, and a dot
+   of the same colour before each label. */
+.pf-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+.pf-dot.is-nft, .pf-split-part.is-nft { background: var(--accent); }
+.pf-dot.is-token, .pf-split-part.is-token { background: #b388ff; }
+.pf-split {
+  display: flex; gap: 2px; height: 6px; margin: 6px 0 4px; border-radius: 999px; overflow: hidden;
+  background: rgba(255, 255, 255, .08);
+}
+.pf-split.is-empty .pf-split-part { display: none; }
+.pf-split-part { flex: 0 1 0; min-width: 0; transition: flex-grow .3s; }
 /* The change under the figures, on a line of its own; a long one trims. */
 .pf-stat-move { display: flex; min-width: 0; min-height: 22px; }
 .pf-stat-move .move-pill { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
