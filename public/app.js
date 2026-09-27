@@ -73,7 +73,7 @@ const STRINGS = {
     noPieces: 'No pieces match.',
     searchPieces: 'Search name or #',
     searchCollections: 'Search collections',
-    noOfferHead: 'No top offer · {n} collections',
+    noOfferHead: 'Collections with no top offer',
     tailReading: 'Reading…',
     searchTokens: 'Search tokens',
     noMatch: 'Nothing matches the search.',
@@ -159,7 +159,7 @@ const STRINGS = {
     noPieces: 'Eşleşen item yok.',
     searchPieces: 'İsim ya da # ara',
     searchCollections: 'Koleksiyon ara',
-    noOfferHead: 'Teklifi olmayan koleksiyonlar · {n}',
+    noOfferHead: 'Teklifi olmayan koleksiyonlar',
     tailReading: 'Okunuyor…',
     searchTokens: 'Token ara',
     noMatch: 'Aramayla eşleşen yok.',
@@ -1435,8 +1435,16 @@ function portfolioRow(group) {
     const divider = document.createElement('div');
     divider.className = 'pf-row pf-divider';
     const label = document.createElement('span');
-    label.textContent = t('noOfferHead', { n: group.count.toLocaleString('en-US') });
+    label.className = 'pf-divider-title';
+    label.textContent = t('noOfferHead');
     divider.appendChild(label);
+    // The count once there is one; while nothing is in yet, only "Reading".
+    if (group.count) {
+      const count = document.createElement('span');
+      count.className = 'pf-divider-count';
+      count.textContent = group.count.toLocaleString('en-US');
+      divider.appendChild(count);
+    }
     if (portfolioTailLoading) {
       const reading = document.createElement('span');
       reading.className = 'pf-divider-note';
