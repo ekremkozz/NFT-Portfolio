@@ -297,6 +297,15 @@ a.pf-history-move:hover span { color: var(--accent); }
 .pf-updated b { color: var(--text); font-weight: 600; }
 .pf-updated i { font-style: normal; opacity: .7; }
 .pf-updated:empty { display: none; }
+.pf-updated.is-reading, .pf-controls .pf-updated.is-reading {
+  gap: 7px; color: var(--accent); background: rgba(32, 129, 226, .1); border-color: rgba(32, 129, 226, .35);
+  font-variant-numeric: tabular-nums;
+}
+.pf-updated.is-reading::before {
+  content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  animation: pf-reading-pulse 1.2s ease-in-out infinite;
+}
+@keyframes pf-reading-pulse { 50% { opacity: .25; } }
 .pf-top .portfolio-wallets { position: relative; }
 .pf-wallet-trigger {
   display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
@@ -807,3 +816,10 @@ body.single-wallet .pf-tok-head, body.single-wallet .pf-token { grid-template-co
 }
 .pf-token-change { font-size: 11.5px; font-weight: 500; white-space: nowrap; }
 .pf-token-change:not(.tok-up):not(.tok-down) { color: var(--muted); }
+
+/* Narrow: the header's cards one under the other, each the full width. */
+@media (max-width: 1000px) {
+  section.tab[data-tab="portfolio"] .pf-top { flex-direction: column; }
+  section.tab[data-tab="portfolio"] .pf-stats { flex: none; grid-template-columns: minmax(0, 1fr); }
+  section.tab[data-tab="portfolio"] .pf-controls { flex-direction: row; align-items: center; flex-wrap: wrap; }
+}

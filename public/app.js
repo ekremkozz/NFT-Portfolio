@@ -2535,6 +2535,8 @@ let portfolioLoadingTimer = null;
 function paintPortfolioUpdated() {
   const label = $('#portfolio-updated');
   if (!label) return;
+  // A read under way looks it: its own colour, apart from "Updated … ago".
+  label.classList.toggle('is-reading', Boolean(portfolioItemsLoading || portfolioTailLoading));
   if (portfolioItemsLoading) {
     label.textContent = t('readingItems', { n: portfolioItemsLoading.toLocaleString('en-US') });
     return;
