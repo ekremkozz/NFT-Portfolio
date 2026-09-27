@@ -732,9 +732,16 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: 300px minma
 .pf-moves.is-up { border-color: rgba(52, 199, 123, .35); }
 .pf-moves.is-down { border-color: rgba(235, 87, 87, .35); }
 .pf-move-list { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; }
+.pf-moves-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.pf-moves-head .pf-move-net:empty { display: none; }
+.pf-move-item { cursor: pointer; }
+.pf-move-item:hover .pf-move-name { text-decoration: underline; }
+/* A row just gone to: a brief glow. */
+@keyframes pf-glow { 0%, 60% { background: rgba(32, 129, 226, .22); } 100% { background: transparent; } }
+.pf-row.is-glow, .pf-token.is-glow { animation: pf-glow 1.8s ease-out; }
 .pf-move-none { color: var(--muted); font-size: 12px; }
 .pf-move-net {
-  align-self: flex-start; display: inline-flex; align-items: center; height: 22px; padding: 0 9px;
+  flex: none; display: inline-flex; align-items: center; height: 22px; padding: 0 9px;
   border-radius: 999px; font-family: var(--mono); font-weight: 700; font-size: 12.5px;
 }
 .pf-move-net.is-up { color: var(--green); background: rgba(52, 199, 123, .16); }

@@ -2716,6 +2716,8 @@ function paintPortfolioMove() {
   forgetPictures(box);
   box.textContent = '';
   if (card) card.classList.remove('is-up', 'is-down');
+  const heading = document.getElementById('portfolio-move-net');
+  if (heading) { heading.className = 'pf-move-net'; heading.textContent = ''; }
   if (!portfolioMove) {
     const none = document.createElement('span');
     none.className = 'pf-move-none';
@@ -2724,10 +2726,12 @@ function paintPortfolioMove() {
     return;
   }
   if (card) card.classList.add(portfolioMove.net > 0 ? 'is-up' : 'is-down');
-  const net = document.createElement('span');
-  net.className = `pf-move-net ${portfolioMove.net > 0 ? 'is-up' : 'is-down'}`;
-  net.textContent = signed(portfolioMove.net);
-  box.appendChild(net);
+  // The net, on the heading's line at the right: it grows to the left.
+  const net = document.getElementById('portfolio-move-net');
+  if (net) {
+    net.className = `pf-move-net ${portfolioMove.net > 0 ? 'is-up' : 'is-down'}`;
+    net.textContent = signed(portfolioMove.net);
+  }
   const pictureOf = new Map();
   for (const group of portfolioGroups) if (group.image) pictureOf.set(group.name, group.image);
   for (const token of portfolioTokens) if (token.image) pictureOf.set(token.name || token.symbol, token.image);
@@ -2744,7 +2748,54 @@ function paintPortfolioMove() {
     const amount = document.createElement('b');
     amount.textContent = signed(move.change);
     item.append(pic, name, amount);
+    // A click goes to its row in the table.
+    item.addEventListener('click', () => goToHolding(move.name));
     box.appendChild(item);
+  }
+}
+
+/*
+ * To a holding's row, by name: a collection in the collections table -- its
+ * search cleared if it hides it, the no-offer part opened if it is there --
+ * or a token in the tokens table. The row glows for a moment.
+ */
+function goToHolding(name) {
+  const glow = (row) => {
+    if (!row) return;
+    row.classList.remove('is-glow');
+    void row.offsetWidth;
+    row.classList.add('is-glow');
+    setTimeout(() => row.classList.remove('is-glow'), 1800);
+  };
+  const rows = $('#portfolio-cards');
+  if (portfolioGroups.some((group) => group.name === name)) {
+    if (tableSearch.collections && !searchMatch(tableSearch.collections, name)) {
+      tableSearch.collections = '';
+      const search = $('#pf-search-collections');
+      if (search) search.value = '';
+    }
+    let at = tableWindow.groups.findIndex((group) => !group.divider && group.name === name);
+    if (at < 0 && !portfolioTailOpen) {
+      portfolioTailOpen = true;
+      tailOpenedByJump = true;
+      renderPortfolioCards();
+      at = tableWindow.groups.findIndex((group) => !group.divider && group.name === name);
+    }
+    if (at < 0) { renderPortfolioCards(); at = tableWindow.groups.findIndex((group) => !group.divider && group.name === name); }
+    if (at < 0) return;
+    const height = tableWindow.rowHeight;
+    rows.scrollTo({ top: Math.max(0, at * height - rows.clientHeight / 2 + height / 2), behavior: 'smooth' });
+    setTimeout(() => {
+      paintTableWindow(true);
+      glow(tableWindow.drawn.get(tableWindow.groups[at]));
+    }, 450);
+    return;
+  }
+  const token = [...document.querySelectorAll('#portfolio-tokens .pf-token:not(.pf-token-sub)')]
+    .find((row) => row.querySelector('.pf-token-name b')?.textContent === name);
+  if (token) {
+    token.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    setTimeout(() => glow(token), 350);
   }
 }
 
