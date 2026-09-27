@@ -61,6 +61,8 @@ const STRINGS = {
     keyFromEnv: 'Set by the OPENSEA_API_KEY secret of this environment.',
     keySaved: 'A key is saved. Leave blank to keep it; type a new one to replace it.',
     keyNone: 'Not needed to view your portfolio. Stays on this machine; never sent to the page again.',
+    floatsLabel: 'Change animations',
+    floatsHint: 'The amount rises over a collection when its value changes. Kept in this browser.',
     notAddress: 'Not a wallet address: {a}',
     needWallet: 'Add at least one wallet address.',
     allWallets: 'All wallets',
@@ -154,6 +156,8 @@ const STRINGS = {
     keyFromEnv: 'Bu ortamın OPENSEA_API_KEY secret\u2019ı ile ayarlı.',
     keySaved: 'Kayıtlı bir anahtar var. Korumak için boş bırak, değiştirmek için yenisini yaz.',
     keyNone: 'Portfolyonu görmek için gerekmez. Bu makinede kalır, sayfaya bir daha gönderilmez.',
+    floatsLabel: 'Değişim animasyonları',
+    floatsHint: 'Bir koleksiyonun değeri değişince tutar üstünde yükselip kaybolur. Bu tarayıcıda saklanır.',
     notAddress: 'Cüzdan adresi değil: {a}',
     needWallet: 'En az bir cüzdan adresi ekle.',
     allWallets: 'Tüm cüzdanlar',
@@ -557,6 +561,8 @@ function openSettings(firstRun = false) {
           <input id="settings-api-key" type="password" autocomplete="off" placeholder="${t('apiKeyPlaceholder')}"></label>
         <p class="settings-hint" id="settings-key-hint"></p>
       </div>
+      <label class="settings-toggle"><input id="settings-floats" type="checkbox">
+        <span>${t('floatsLabel')}<small>${t('floatsHint')}</small></span></label>
       <p class="pf-manual-error" id="settings-error"></p>
       <div class="modal-actions">
         ${firstRun ? '' : `<button class="btn" id="settings-cancel" type="button">${t('close')}</button>`}
@@ -593,6 +599,13 @@ function openSettings(firstRun = false) {
   } else {
     hint.textContent = t('keyNone');
   }
+
+  // Kept in this browser as soon as it is switched; Save is for the wallets.
+  const floats = modal.querySelector('#settings-floats');
+  floats.checked = floatsOn();
+  floats.addEventListener('change', () => {
+    try { localStorage.setItem(FLOATS_KEY, floats.checked ? '1' : '0'); } catch { /* not kept */ }
+  });
 
   const close = () => { modal.remove(); document.removeEventListener('keydown', onKey); };
   const onKey = (event) => { if (event.key === 'Escape' && !firstRun) close(); };
@@ -2783,6 +2796,74 @@ function notePortfolioMove(event) {
     portfolioMove = { net: event.net, moves: [top, ...others].filter(Boolean), since: event.since };
   }
   paintPortfolioMove();
+  // A change new since the last look: float it once the tables are drawn.
+  const at = event ? event.at : 0;
+  if (seenMoveAt !== null && at && at !== seenMoveAt && event.net && floatsOn()) {
+    setTimeout(() => showMoveFloats(event), 60);
+  }
+  seenMoveAt = at || seenMoveAt || 0;
+}
+
+/*
+ * A change, shown as it happens: its amount rises over the collection's row
+ * and over the Last change card, and fades. Only for a change that arrives
+ * while the page is open -- not the one already there when it loads. Can be
+ * switched off in Settings; kept in this browser.
+ */
+const FLOATS_KEY = 'nftPortfolio.floats';
+let seenMoveAt = null;
+
+// Unset, it follows the system's reduce-motion choice; switched, the switch wins.
+function floatsOn() {
+  let saved = null;
+  try { saved = localStorage.getItem(FLOATS_KEY); } catch { /* default */ }
+  if (saved) return saved === '1';
+  return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function floatOver(el, change) {
+  const r = pageRect(el);
+  if (!r.width) return;
+  const tag = document.createElement('div');
+  tag.className = `pf-float ${change > 0 ? 'is-up' : 'is-down'}`;
+  tag.textContent = `${change > 0 ? '+' : '−'}${formatUsd(Math.abs(change))}`;
+  tag.style.left = `${r.left + r.width / 2}px`;
+  tag.style.top = `${r.top}px`;
+  document.body.appendChild(tag);
+  tag.addEventListener('animationend', () => tag.remove());
+}
+
+// Seen within its scrolling box: a row scrolled out of sight gets no float.
+function inSight(el, box) {
+  const r = pageRect(el);
+  const b = pageRect(box);
+  return r.height && r.bottom > b.top + 4 && r.top < b.bottom - 4;
+}
+
+function showMoveFloats(event) {
+  const moves = (event && event.moves) || [];
+  if (!moves.length) return;
+  const byName = new Map(moves.map((m) => [m.name, m.change]));
+  const rows = $('#portfolio-cards');
+  if (rows) {
+    for (const [group, row] of tableWindow.drawn) {
+      const change = byName.get(group.name);
+      const cell = change && row.querySelector('.is-value');
+      if (cell && inSight(row, rows)) floatOver(cell, change);
+    }
+  }
+  const net = $('#portfolio-move-net');
+  if (net && net.textContent) floatOver(net, event.net);
+  const list = $('#portfolio-move');
+  if (list) {
+    for (const pic of list.querySelectorAll('.pf-move-pic')) {
+      // Side by side the amounts would overlap: the pictures pulse instead.
+      if (!byName.get(pic.getAttribute('aria-label')) || !inSight(pic, list)) continue;
+      pic.classList.remove('is-pop');
+      void pic.offsetWidth;
+      pic.classList.add('is-pop');
+    }
+  }
 }
 
 function ageText(ms) {
