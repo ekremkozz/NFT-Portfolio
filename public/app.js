@@ -73,6 +73,9 @@ const STRINGS = {
     asleepCodespace: 'The codespace is asleep, so the figures are not updating.',
     wakeCodespace: 'Wake it up',
     waking: 'Waking… this page carries on by itself',
+    signInAgain: 'The codespace is back and wants you signed in again.',
+    connect: 'Connect',
+    connecting: 'Connecting… this page carries on by itself',
     asleepLocal: 'The app is not running, so the figures are not updating. Start it with npm start; this page picks up by itself.',
     noItemsSelected: 'No items visible in the selected wallets.',
     noItems: 'No items visible in these wallets.',
@@ -168,6 +171,9 @@ const STRINGS = {
     asleepCodespace: 'Codespace uykuda, rakamlar güncellenmiyor.',
     wakeCodespace: 'Uyandır',
     waking: 'Uyanıyor… sayfa kendiliğinden devam edecek',
+    signInAgain: 'Codespace uyandı, yeniden giriş istiyor.',
+    connect: 'Bağlan',
+    connecting: 'Bağlanıyor… sayfa kendiliğinden devam edecek',
     asleepLocal: 'Uygulama çalışmıyor, rakamlar güncellenmiyor. npm start ile başlat; sayfa kendiliğinden devam eder.',
     noItemsSelected: 'Seçili cüzdanlarda görünen item yok.',
     noItems: 'Bu cüzdanlarda görünen item yok.',
@@ -331,6 +337,8 @@ function showAppAsleep() {
   appAsleepTriedAt = Date.now();
   const summary = $('#portfolio-summary');
   summary.classList.add('is-asleep');
+  // Signed in, the app still starting: the connecting note stays until it answers.
+  if (signInStarted) return;
   summary.textContent = IN_CODESPACE ? t('asleepCodespace') : t('asleepLocal');
   if (IN_CODESPACE) {
     /*
@@ -363,7 +371,51 @@ function showAppAsleep() {
 
 let appWaking = false;
 
+/*
+ * Back, but asking for sign-in again. Reloading the page for it went wrong
+ * while the codespace was still starting: the sign-in finished before the
+ * app was up, and the page landed on the browser's own error, with nothing
+ * left to try again. So the sign-in happens in a small window instead; this
+ * page stays, asks every few seconds, and carries on once the app answers.
+ */
+let signInWindow = null;
+let signInStarted = 0;
+
+function showAppSignIn() {
+  appAsleep = true;
+  appAsleepTriedAt = Date.now();
+  const summary = $('#portfolio-summary');
+  summary.classList.add('is-asleep');
+  if (signInStarted) return;              // already connecting: leave the note be
+  summary.textContent = t('signInAgain');
+  const connect = document.createElement('button');
+  connect.type = 'button';
+  connect.className = 'btn btn-mini pf-wake';
+  connect.textContent = t('connect');
+  connect.addEventListener('click', () => {
+    signInWindow = window.open(`${location.origin}/api/settings`, 'nftPortfolioSignIn', 'width=520,height=640');
+    signInStarted = Date.now();
+    summary.textContent = t('connecting');
+    const tryAgain = () => {
+      if (!appAsleep) return;
+      if (Date.now() - signInStarted > 5 * 60 * 1000) {
+        signInStarted = 0;
+        showAppSignIn();
+        return;
+      }
+      loadPortfolio(true).finally(() => setTimeout(tryAgain, 4000));
+    };
+    setTimeout(tryAgain, 4000);
+  });
+  summary.append(' ', connect);
+}
+
 function clearAppAsleep() {
+  if (signInStarted) {
+    signInStarted = 0;
+    try { signInWindow && signInWindow.close(); } catch { /* already closed */ }
+    signInWindow = null;
+  }
   if (!appAsleep) return;
   appAsleep = false;
   $('#portfolio-summary').classList.remove('is-asleep');
@@ -787,18 +839,8 @@ async function loadPortfolio(force) {
     data = await api('/api/portfolio');
   } catch (error) {
     if (error.signIn) {
-      /*
-       * The codespace is back but wants this browser signed in again, which
-       * only a page load does (the redirect goes to github.com). At most once
-       * a minute, so a sign-in that keeps failing cannot loop.
-       */
-      let last = 0;
-      try { last = Number(sessionStorage.getItem('nftPortfolio.signInReload')) || 0; } catch { /* none */ }
-      if (Date.now() - last > 60000) {
-        try { sessionStorage.setItem('nftPortfolio.signInReload', String(Date.now())); } catch { /* not kept */ }
-        location.reload();
-        return;
-      }
+      showAppSignIn();
+      return;
     }
     if (isAppGone(error)) {
       showAppAsleep();
