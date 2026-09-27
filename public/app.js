@@ -2683,32 +2683,36 @@ let portfolioMove = null;
  */
 function paintPortfolioMove() {
   const signed = (usd) => `${usd > 0 ? '+' : '−'}${formatUsd(Math.abs(usd))}`;
-  for (const [id, withName] of [['portfolio-move', true]]) {
-    const pill = document.getElementById(id);
-    if (!pill) continue;
-    pill.classList.remove('is-up', 'is-down');
-    if (!portfolioMove) { pill.textContent = ''; continue; }
-    const { net, top } = portfolioMove;
-    pill.classList.add(net > 0 ? 'is-up' : 'is-down');
-    pill.textContent = withName && top
-      ? `${signed(net)} · ${top.name} ${signed(top.change)}`
-      : signed(net);
+  // The tab's own pill, where there is one: the net alone.
+  const nav = document.getElementById('nav-move');
+  if (nav) {
+    nav.classList.remove('is-up', 'is-down');
+    nav.textContent = portfolioMove ? signed(portfolioMove.net) : '';
+    if (portfolioMove) nav.classList.add(portfolioMove.net > 0 ? 'is-up' : 'is-down');
   }
   /*
-   * Beside the pill, the next two biggest moves either way, each a chip with
-   * its picture -- the pill names only the one that led.
+   * Beside the balance, one panel: the net, then the collections that moved
+   * most, each with its picture and its own colour -- what led the move first.
    */
-  const more = document.getElementById('portfolio-move-more');
-  if (!more) return;
-  forgetPictures(more);
-  more.textContent = '';
+  const box = document.getElementById('portfolio-move');
+  if (!box) return;
+  forgetPictures(box);
+  box.textContent = '';
+  box.classList.remove('is-up', 'is-down');
+  box.classList.toggle('is-empty', !portfolioMove);
   if (!portfolioMove) return;
+  // The whole panel wears the overall direction's colour.
+  box.classList.add(portfolioMove.net > 0 ? 'is-up' : 'is-down');
+  const net = document.createElement('span');
+  net.className = `pf-move-net ${portfolioMove.net > 0 ? 'is-up' : 'is-down'}`;
+  net.textContent = signed(portfolioMove.net);
+  box.appendChild(net);
   const pictureOf = new Map();
   for (const group of portfolioGroups) if (group.image) pictureOf.set(group.name, group.image);
   for (const token of portfolioTokens) if (token.image) pictureOf.set(token.name || token.symbol, token.image);
-  for (const move of portfolioMove.others) {
-    const chip = document.createElement('span');
-    chip.className = `pf-history-move ${move.change > 0 ? 'is-up' : 'is-down'}`;
+  for (const move of portfolioMove.moves) {
+    const item = document.createElement('span');
+    item.className = `pf-move-item ${move.change > 0 ? 'is-up' : 'is-down'}`;
     const pic = document.createElement('i');
     pic.className = 'pf-history-pic';
     const image = pictureOf.get(move.name);
@@ -2717,18 +2721,19 @@ function paintPortfolioMove() {
     name.textContent = move.name;
     const amount = document.createElement('b');
     amount.textContent = signed(move.change);
-    chip.append(pic, name, amount);
-    more.appendChild(chip);
+    item.append(pic, name, amount);
+    box.appendChild(item);
   }
 }
 
 function notePortfolioMove(event) {
   portfolioMove = null;
   if (event && event.net) {
+    // What led the move (the biggest the same way), then the next two either way.
     const top = (event.moves || []).find((m) => Math.sign(m.change) === Math.sign(event.net)) || null;
     const others = (event.moves || []).filter((m) => m !== top)
       .sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 2);
-    portfolioMove = { net: event.net, top, others, since: event.since };
+    portfolioMove = { net: event.net, moves: [top, ...others].filter(Boolean), since: event.since };
   }
   paintPortfolioMove();
 }
