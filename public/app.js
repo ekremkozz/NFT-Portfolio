@@ -561,8 +561,9 @@ function openSettings(firstRun = false) {
           <input id="settings-api-key" type="password" autocomplete="off" placeholder="${t('apiKeyPlaceholder')}"></label>
         <p class="settings-hint" id="settings-key-hint"></p>
       </div>
-      <label class="settings-toggle"><input id="settings-floats" type="checkbox">
-        <span>${t('floatsLabel')}<small>${t('floatsHint')}</small></span></label>
+      <label class="settings-toggle">
+        <span>${t('floatsLabel')}<small>${t('floatsHint')}</small></span>
+        <input id="settings-floats" type="checkbox"><span class="switch"></span></label>
       <p class="pf-manual-error" id="settings-error"></p>
       <div class="modal-actions">
         ${firstRun ? '' : `<button class="btn" id="settings-cancel" type="button">${t('close')}</button>`}
