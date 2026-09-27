@@ -66,7 +66,9 @@ const STRINGS = {
     couldNotFetch: 'Could not fetch: {e}',
     couldNotRead: 'Could not read the portfolio.',
     serverDown: 'Could not reach the local server: {e}',
-    asleepCodespace: 'The codespace is asleep, so the figures are not updating. Open it again to carry on; this page picks up by itself:',
+    asleepCodespace: 'The codespace is asleep, so the figures are not updating.',
+    wakeCodespace: 'Wake it up',
+    waking: 'Waking… this page carries on by itself',
     asleepLocal: 'The app is not running, so the figures are not updating. Start it with npm start; this page picks up by itself.',
     noItemsSelected: 'No items visible in the selected wallets.',
     noItems: 'No items visible in these wallets.',
@@ -155,7 +157,9 @@ const STRINGS = {
     couldNotFetch: 'Alınamadı: {e}',
     couldNotRead: 'Portfolyo okunamadı.',
     serverDown: 'Yerel sunucuya ulaşılamadı: {e}',
-    asleepCodespace: 'Codespace uykuda, rakamlar güncellenmiyor. Devam etmek için codespace’i yeniden aç; sayfa kendiliğinden devam eder:',
+    asleepCodespace: 'Codespace uykuda, rakamlar güncellenmiyor.',
+    wakeCodespace: 'Uyandır',
+    waking: 'Uyanıyor… sayfa kendiliğinden devam edecek',
     asleepLocal: 'Uygulama çalışmıyor, rakamlar güncellenmiyor. npm start ile başlat; sayfa kendiliğinden devam eder.',
     noItemsSelected: 'Seçili cüzdanlarda görünen item yok.',
     noItems: 'Bu cüzdanlarda görünen item yok.',
@@ -312,14 +316,35 @@ function showAppAsleep() {
   summary.classList.add('is-asleep');
   summary.textContent = IN_CODESPACE ? t('asleepCodespace') : t('asleepLocal');
   if (IN_CODESPACE) {
-    const link = document.createElement('a');
-    link.href = 'https://github.com/codespaces';
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = 'github.com/codespaces';
-    summary.append(' ', link);
+    /*
+     * One click to wake it: this page's address names the codespace
+     * (<name>-4180.app.github.dev), and opening the codespace itself
+     * (<name>.github.dev) starts it -- the app with it. The page cannot start
+     * it on its own: that would take a GitHub token, which it never asks for.
+     */
+    const name = location.hostname.replace(/-\d+\.app\.github\.dev$/, '');
+    const wake = document.createElement('a');
+    wake.className = 'btn btn-mini pf-wake';
+    wake.target = '_blank';
+    wake.rel = 'noopener noreferrer';
+    wake.href = name !== location.hostname ? `https://${name}.github.dev` : 'https://github.com/codespaces';
+    wake.textContent = appWaking ? t('waking') : t('wakeCodespace');
+    wake.addEventListener('click', () => {
+      appWaking = true;
+      wake.textContent = t('waking');
+      // Looked for every ten seconds while it starts, for a few minutes.
+      const started = Date.now();
+      const tryAgain = () => {
+        if (!appAsleep || Date.now() - started > 5 * 60 * 1000) { appWaking = false; return; }
+        loadPortfolio(true).finally(() => setTimeout(tryAgain, 10000));
+      };
+      setTimeout(tryAgain, 10000);
+    });
+    summary.append(' ', wake);
   }
 }
+
+let appWaking = false;
 
 function clearAppAsleep() {
   if (!appAsleep) return;

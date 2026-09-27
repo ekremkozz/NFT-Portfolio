@@ -636,6 +636,13 @@ select:-webkit-autofill {
 .pf-error-line.is-asleep { color: var(--muted); }
 .pf-error-line.is-asleep a { color: var(--accent); text-decoration: none; }
 .pf-error-line.is-asleep a:hover { text-decoration: underline; }
+/* The wake button: a real button, beside the sentence. */
+.pf-error-line.is-asleep a.pf-wake {
+  display: inline-flex; align-items: center; height: 26px; margin-left: 8px; padding: 0 12px;
+  border-radius: 999px; background: var(--accent); color: #fff; font-weight: 600; vertical-align: middle;
+}
+.pf-error-line.is-asleep a.pf-wake:hover { text-decoration: none; filter: brightness(1.1); }
+.pf-error-line { line-height: 26px; }
 
 /* Each piece's place in the pop-up's list, small in its top-right corner. */
 .pf-item-cell { position: relative; }
