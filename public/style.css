@@ -895,6 +895,25 @@ body.single-wallet .pf-tok-head, body.single-wallet .pf-token { grid-template-co
 .pf-jump { flex: none; width: 32px; height: 32px; }
 .pf-jump[hidden] { display: none; }
 .pf-jump svg { width: 16px; height: 16px; }
+/* Controls: the counter over the wallet menu on the left, the buttons a
+   2x2 grid on the right -- using both lines of the card. */
+section.tab[data-tab="portfolio"] .pf-controls {
+  display: grid; grid-template-columns: minmax(210px, 1fr) auto; grid-template-rows: auto auto;
+  align-items: center; column-gap: 10px; row-gap: 8px;
+}
+section.tab[data-tab="portfolio"] .pf-controls .card-actions { display: contents; }
+section.tab[data-tab="portfolio"] .pf-controls .pf-updated-line { grid-column: 1; grid-row: 1; }
+section.tab[data-tab="portfolio"] .pf-controls .portfolio-wallets { grid-column: 1; grid-row: 2; min-width: 0; }
+section.tab[data-tab="portfolio"] .pf-controls .pf-wallet-trigger { width: 100%; }
+section.tab[data-tab="portfolio"] .pf-controls .btn-join {
+  grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-columns: repeat(2, 32px); grid-auto-rows: 32px;
+  gap: 5px; height: auto; border: 0; border-radius: 0; background: none; overflow: visible;
+}
+section.tab[data-tab="portfolio"] .pf-controls .btn-join > .btn,
+section.tab[data-tab="portfolio"] .pf-controls .btn-join > .btn + .btn {
+  width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-3);
+}
+section.tab[data-tab="portfolio"] .pf-controls .btn-join > .btn:hover { background: var(--panel-2); border-color: var(--accent); }
 /* Narrow: the header's cards one under the other, each the full width. */
 @media (max-width: 1100px) {
   section.tab[data-tab="portfolio"] .pf-top { flex-direction: column; }
