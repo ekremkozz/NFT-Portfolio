@@ -693,6 +693,15 @@ section.tab[data-tab="portfolio"] .pf-stat-row .move-pill {
 /* Profile at a fixed width, the value taking what its figures need, the
    last change beside it. */
 section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: 300px minmax(0, 1fr) minmax(230px, 280px); }
+/* Wide enough for the tables side by side: the header on the tables' grid.
+   Profile and value over the collections table (--pf-left, measured), the
+   last change and the controls over the tokens table. */
+@media (min-width: 1101px) {
+  section.tab[data-tab="portfolio"] .pf-top {
+    display: grid; grid-template-columns: 300px minmax(0, calc(var(--pf-left, 720px) - 300px - var(--pf-gap))) minmax(0, 1fr) auto;
+  }
+  section.tab[data-tab="portfolio"] .pf-stats { display: contents; }
+}
 .pf-stats .pf-profile { flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; overflow: hidden; }
 .pf-profile[hidden] { display: none; }
 .pf-profile-pic {
@@ -734,8 +743,8 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: 300px minma
 .pf-move-list { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; }
 .pf-moves-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
 .pf-moves-head .pf-move-net:empty { display: none; }
-.pf-move-item { cursor: pointer; }
-.pf-move-item:hover .pf-move-name { text-decoration: underline; }
+a.pf-move-item { cursor: pointer; text-decoration: none; }
+a.pf-move-item:hover .pf-move-name { color: var(--accent); }
 /* A row just gone to: a brief glow. */
 @keyframes pf-glow { 0%, 60% { background: rgba(32, 129, 226, .22); } 100% { background: transparent; } }
 .pf-row.is-glow, .pf-token.is-glow { animation: pf-glow 1.8s ease-out; }
@@ -883,7 +892,7 @@ body.single-wallet .pf-tok-head, body.single-wallet .pf-token { grid-template-co
 .pf-jump[hidden] { display: none; }
 .pf-jump svg { width: 16px; height: 16px; }
 /* Narrow: the header's cards one under the other, each the full width. */
-@media (max-width: 1000px) {
+@media (max-width: 1100px) {
   section.tab[data-tab="portfolio"] .pf-top { flex-direction: column; }
   section.tab[data-tab="portfolio"] .pf-stats { flex: none; grid-template-columns: minmax(0, 1fr); }
   section.tab[data-tab="portfolio"] .pf-controls { flex-direction: row; align-items: center; flex-wrap: wrap; }

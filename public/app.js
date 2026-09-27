@@ -2160,6 +2160,16 @@ document.addEventListener('click', () => {
 function fitPortfolioTables() {
   const layout = document.querySelector('.pf-layout');
   if (!layout || !layout.offsetParent) return;
+  /*
+   * The header's split follows the tables': the collections table's width,
+   * handed up, so the card edges above meet the gap between the tables.
+   */
+  const leftTable = layout.querySelector('.pf-main');
+  const holder = layout.closest('.card');
+  if (leftTable && holder) {
+    const width = typeof pageRect === 'function' ? pageRect(leftTable).width : leftTable.getBoundingClientRect().width;
+    holder.style.setProperty('--pf-left', `${Math.round(width)}px`);
+  }
   // Down to the window's bottom edge, less everything the page puts under
   // the tables -- the card's padding, the footer note -- so the page itself
   // never scrolls and no strip of empty window is left either.
@@ -2735,8 +2745,19 @@ function paintPortfolioMove() {
   const pictureOf = new Map();
   for (const group of portfolioGroups) if (group.image) pictureOf.set(group.name, group.image);
   for (const token of portfolioTokens) if (token.image) pictureOf.set(token.name || token.symbol, token.image);
+  // Where each leads: a collection's OpenSea page, a token's page on the
+  // network holding most of it.
+  const pageOf = new Map();
+  for (const token of groupPortfolioTokens(portfolioTokens)) pageOf.set(token.name || token.symbol, tokenPageUrl(token.parts[0]));
+  for (const group of portfolioGroups) if (group.slug) pageOf.set(group.name, `https://opensea.io/collection/${group.slug}`);
   for (const move of portfolioMove.moves) {
-    const item = document.createElement('span');
+    const url = pageOf.get(move.name);
+    const item = document.createElement(url ? 'a' : 'span');
+    if (url) {
+      item.href = url;
+      item.target = '_blank';
+      item.rel = 'noopener noreferrer';
+    }
     item.className = `pf-move-item ${move.change > 0 ? 'is-up' : 'is-down'}`;
     const pic = document.createElement('i');
     pic.className = 'pf-history-pic';
@@ -2748,56 +2769,10 @@ function paintPortfolioMove() {
     const amount = document.createElement('b');
     amount.textContent = signed(move.change);
     item.append(pic, name, amount);
-    // A click goes to its row in the table.
-    item.addEventListener('click', () => goToHolding(move.name));
     box.appendChild(item);
   }
 }
 
-/*
- * To a holding's row, by name: a collection in the collections table -- its
- * search cleared if it hides it, the no-offer part opened if it is there --
- * or a token in the tokens table. The row glows for a moment.
- */
-function goToHolding(name) {
-  const glow = (row) => {
-    if (!row) return;
-    row.classList.remove('is-glow');
-    void row.offsetWidth;
-    row.classList.add('is-glow');
-    setTimeout(() => row.classList.remove('is-glow'), 1800);
-  };
-  const rows = $('#portfolio-cards');
-  if (portfolioGroups.some((group) => group.name === name)) {
-    if (tableSearch.collections && !searchMatch(tableSearch.collections, name)) {
-      tableSearch.collections = '';
-      const search = $('#pf-search-collections');
-      if (search) search.value = '';
-    }
-    let at = tableWindow.groups.findIndex((group) => !group.divider && group.name === name);
-    if (at < 0 && !portfolioTailOpen) {
-      portfolioTailOpen = true;
-      tailOpenedByJump = true;
-      renderPortfolioCards();
-      at = tableWindow.groups.findIndex((group) => !group.divider && group.name === name);
-    }
-    if (at < 0) { renderPortfolioCards(); at = tableWindow.groups.findIndex((group) => !group.divider && group.name === name); }
-    if (at < 0) return;
-    const height = tableWindow.rowHeight;
-    rows.scrollTo({ top: Math.max(0, at * height - rows.clientHeight / 2 + height / 2), behavior: 'smooth' });
-    setTimeout(() => {
-      paintTableWindow(true);
-      glow(tableWindow.drawn.get(tableWindow.groups[at]));
-    }, 450);
-    return;
-  }
-  const token = [...document.querySelectorAll('#portfolio-tokens .pf-token:not(.pf-token-sub)')]
-    .find((row) => row.querySelector('.pf-token-name b')?.textContent === name);
-  if (token) {
-    token.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    setTimeout(() => glow(token), 350);
-  }
-}
 
 function notePortfolioMove(event) {
   portfolioMove = null;
