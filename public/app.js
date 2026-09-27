@@ -2864,7 +2864,10 @@ function paintProfile() {
   const profile = portfolioProfile || {};
   const short = `${address.slice(0, 6)}…${address.slice(-4)}`;
   const label = walletLabelMap[address.toLowerCase()];
-  $('#portfolio-profile-name').textContent = profile.name || profile.ens || label || short;
+  const name = $('#portfolio-profile-name');
+  name.textContent = profile.name || profile.ens || label || short;
+  // The name opens this wallet's portfolio on OpenSea.
+  name.href = `https://opensea.io/${address}/portfolio`;
   const parts = [short];
   if (profile.ens && profile.ens !== profile.name) parts.push(profile.ens);
   if (wallets.length > 1) parts.push(t('nWallets', { n: wallets.length }));
