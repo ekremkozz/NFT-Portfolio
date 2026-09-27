@@ -6,7 +6,7 @@ A light, fast, **read-only** view of your OpenSea portfolio — every NFT and to
 
 OpenSea's own portfolio page ships megabytes of app code, a heatmap and animations to show you a list. On a large wallet it can all but freeze the browser. This reads the same numbers and draws them plainly:
 
-- **Your profile at the top** — your OpenSea name, picture, ENS and bio, then the total value with its NFT / token split and the latest change.
+- **Your profile at the top** — your OpenSea name, picture, ENS and bio, then the total value with its NFT / token split, and the latest change with the collections that moved.
 - **Collections table** — how many you hold, value (top offer), floor and top offer, sortable and searchable. Click a row to see the pieces you hold.
 - **Collections with no offer** are read after the rest and kept under their own heading, folded, so the value is ready in seconds even on a wallet of 10,000+ pieces.
 - **Tokens table** — amount, value, price and 24h change; a token held on several networks opens onto each network.
@@ -30,7 +30,7 @@ OpenSea's own portfolio page ships megabytes of app code, a heatmap and animatio
 
 The link Codespaces gives you is **private**: only you, signed in to your GitHub account, can open it. Keep it that way — don't make the port public.
 
-Codespaces is free for personal GitHub accounts up to 60 hours a month, far more than this needs. A codespace goes to sleep by itself after 30 minutes without terminal activity, and the page then says so and keeps the last figures; open the codespace again and it carries on. To stop it yourself: **Code** → **Codespaces** → **⋯** → **Stop**.
+Codespaces is free for personal GitHub accounts up to 60 hours a month, far more than this needs. A codespace goes to sleep by itself after 30 minutes without terminal activity; the page then says so, keeps the last figures and offers a **Wake it up** button, and the codespace carries on where it left off. To stop it yourself: **Code** → **Codespaces** → **⋯** → **Stop**.
 
 ## Or run it on your own computer
 
@@ -57,6 +57,8 @@ Then open http://localhost:4180.
 ![Choosing wallets](docs/screenshots/wallets.png)
 
 **Staying up to date.** Every start pulls the latest version. When a new one comes out while the app is open, an *Update available* note appears at the top: click it to see what changed, then **Update now** — the app updates, restarts and the page reloads in a few seconds. Left unattended, it applies the update by itself. **Check for updates** asks straight away and shows the update history. Your wallets and history are always kept.
+
+**Change animations.** When a collection's value changes, the amount rises over its row and fades. They can be switched off under ⚙ settings.
 
 ![An update waiting](docs/screenshots/update.png)
 
@@ -98,16 +100,76 @@ If this saves you time, there is a support mint — *link coming soon*. It is a 
 
 ---
 
-## Türkçe hızlı başlangıç
+## Türkçe
+
+OpenSea portfolyonun hafif, hızlı ve **sadece okuyan** bir görünümü: tüm cüzdanlarındaki her NFT ve token, iki tabloda.
 
 ![NFT Portfolio Lite, Türkçe](docs/screenshots/portfolio-tr.png)
 
+OpenSea'nin kendi portfolyo sayfası bir listeyi göstermek için megabaytlarca kod, ısı haritası ve animasyon yükler; büyük bir cüzdanda tarayıcıyı neredeyse dondurur. Bu uygulama aynı rakamları okur ve sade bir şekilde çizer:
+
+- **Üstte profilin**: OpenSea adın, resmin, ENS'in ve biyografin; yanında toplam değer, NFT / token payı ve son değişim.
+- **Koleksiyon tablosu**: kaç tane tuttuğun, değer (en yüksek teklif), floor ve teklif; sıralanır ve aranır. Bir satıra tıklayınca tuttuğun parçalar açılır.
+- **Teklifi olmayan koleksiyonlar** en son okunur ve kendi başlıkları altında kapalı durur; böylece 10.000+ parçalık bir cüzdanda bile değer saniyeler içinde hazır olur.
+- **Token tablosu**: miktar, değer, fiyat ve 24 saatlik değişim; birkaç ağda tutulan bir token her ağa ayrı açılır.
+- **Fiyat geçmişi**: bakiyeni neyin ne zaman oynattığı; okuma, saat, 6 saat, 12 saat, gün ya da kendi seçtiğin aralıkla. Bir haftası saklanır.
+- **Elle eklenen NFT'ler**: OpenSea'nin hiçbir cüzdanında göstermediği parçalar için, örneğin stake edilmiş olanlar.
+- **Türkçe ve İngilizce**; GitHub'dan **kendini günceller**.
+
+> **Tek ihtiyacı cüzdan ADRESİN.** Bu uygulama asla private key ya da seed phrase istemez ve hiçbir şeyi hareket ettiremez. Buna benzeyen bir şey key isterse o bu uygulama değildir; sadece bu repoyu kullan.
+
+![Her parça ne işe yarar](docs/screenshots/annotated-tr.png)
+
+### Tarayıcıda başlat (GitHub Codespaces, kurulum yok)
+
 1. Bu sayfada **Code** → **Codespaces** → **Create codespace on main**'e tıkla.
 2. Biraz bekle: uygulama kendini günceller, kendiliğinden başlar ve sayfası yeni sekmede açılır. (Açılmazsa **Ports** sekmesinde 4180'in yanındaki küreye tıkla ya da terminale `npm start` yaz.)
-3. Cüzdan **adresini** (0x…) yapıştır, kaydet. Sağ üstteki **TR** ile dili Türkçe yapabilirsin.
+3. Cüzdan **adreslerini** (0x…) yapıştır, istersen kısa bir ad ver ve kaydet. Sağ üstteki **TR** ile dili Türkçe yapabilirsin.
 
-**Güncelleme:** Uygulama açıkken yeni sürüm çıkarsa üstte *Güncelleme var* notu belirir. Tıklayıp neyin değiştiğine bak, **Şimdi güncelle**'ye bas; birkaç saniyede güncellenir ve sayfa yenilenir. Kimse bakmıyorsa kendiliğinden günceller. Cüzdanların ve geçmişin korunur.
+Codespaces'in verdiği bağlantı **özeldir**: onu sadece GitHub hesabına giriş yapmış olan sen açabilirsin. Öyle kalsın; portu herkese açık yapma.
 
-**Codespace uyuyunca:** 30 dakika terminalde hareket olmazsa codespace kendiliğinden durur; aylık 60 saatinden yemesin diye bu iyidir. Sayfa bunu söyler ve son rakamları gösterir, codespace'i yeniden açınca kaldığı yerden devam eder.
+Codespaces kişisel GitHub hesaplarında ayda 60 saate kadar ücretsizdir; bu uygulamanın ihtiyacından çok fazla. Terminalde 30 dakika hareket olmazsa codespace kendiliğinden uyur; aylık süreni yemesin diye bu iyidir. Sayfa bunu söyler, son rakamları gösterir ve bir **Uyandır** düğmesi sunar; codespace yeniden açılınca kaldığı yerden devam eder. Kendin durdurmak için: **Code** → **Codespaces** → **⋯** → **Stop**.
+
+### Ya da kendi bilgisayarında çalıştır
+
+[Node.js](https://nodejs.org) 18 ya da daha yenisi gerekir, başka bir şey gerekmez.
+
+```
+git clone https://github.com/ekremkozz/NFT-Portfolio.git
+cd NFT-Portfolio
+npm start
+```
+
+Sonra http://localhost:4180 adresini aç.
+
+### Kullanım
+
+**Tuttuğun parçalar.** Bir koleksiyonun satırına tıkla: parçaları hemen altında açılır; arama, cüzdana göre süzme ve token numarasına göre sıralama vardır.
+
+**Birden çok cüzdan.** Hepsini ⚙ ayarlardan ekle; portfolyo hepsini toplar. **Tüm cüzdanlar** menüsü tabloları, toplamları ve geçmişi işaretlediğin cüzdanlara daraltır.
+
+**Güncel kalmak.** Her açılışta son sürümü çeker. Uygulama açıkken yeni sürüm çıkarsa üstte *Güncelleme var* notu belirir: tıklayıp neyin değiştiğine bak, **Şimdi güncelle**'ye bas; uygulama birkaç saniyede güncellenir, yeniden başlar ve sayfa yenilenir. Kimse bakmıyorsa güncellemeyi kendisi uygular. **Güncellemeleri kontrol et** hemen sorar ve güncelleme geçmişini gösterir. Cüzdanların ve geçmişin her zaman korunur.
+
+**Değişim animasyonları.** Bir koleksiyonun değeri değişince tutar satırın üstünde yükselip kaybolur. ⚙ ayarlardan kapatılabilir.
+
+### Elle NFT eklemek (isteğe bağlı)
+
+Stake edilmiş NFT'ler staking kontratında durur, bu yüzden OpenSea onları hiçbir cüzdanında göstermez. **+**'ya tıkla, parçanın OpenSea bağlantısını (ya da koleksiyon bağlantısını ve kaç tane tuttuğunu) yapıştır; diğerleriyle birlikte sayılır ve *Manual* olarak işaretlenir.
+
+Sadece bu özellik bir **OpenSea API anahtarı** ister ([buradan al](https://docs.opensea.io/reference/api-keys)); geri kalan her şey onsuz çalışır. Codespace'te en güvenli yeri bir **Codespaces secret**'tır; GitHub onu şifreler ve koda asla yazılmaz:
+
+1. GitHub → **Settings** → **Codespaces** → **New secret**
+2. Ad: `OPENSEA_API_KEY`, değer: anahtarın, repo: bu repo.
+3. Codespace'i yeniden başlat.
+
+İstersen ⚙ ayarlara da yapıştırabilirsin; o zaman sadece o makinedeki `data/` klasöründe saklanır ve sayfaya bir daha gönderilmez. OpenSea API anahtarı sadece veri *okuyabilir*, cüzdanlarına dokunamaz.
+
+### Verilerin nerede
+
+Uygulamanın sakladığı her şey (cüzdan listen, elle eklenen NFT'ler, bir haftalık fiyat değişimleri) çalıştığı yerdeki `data/` klasöründedir. Git onu yok sayar; adreslerinin herkese açık verileri için OpenSea'ye giden istekler dışında o makineden hiç çıkmaz.
+
+### Önemli
+
+**OpenSea ile bağlantısı yoktur.** OpenSea'nin kendi sitesinin okuduğu verileri okur. Bunlar yayımlanmış bir API değildir: OpenSea onları her an değiştirebilir, değiştirdiğinde uygulama güncellenene kadar tablolar boş görünebilir. Değerler OpenSea'nin rakamlarıdır (en yüksek teklifler ve floor'lar), yatırım tavsiyesi değildir.
 
 Bu uygulama **asla** private key ya da seed phrase istemez. İsteyen bir şey görürsen o bu uygulama değildir.
