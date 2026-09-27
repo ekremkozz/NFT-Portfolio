@@ -625,7 +625,13 @@ async function openSeaProfile(address) {
     const accountName = account ? profileField(account[0], new RegExp(`"displayName":"${str}"`)) : '';
     const accountImage = account ? profileField(account[0], new RegExp(`"imageUrl":"${str}"`)) : '';
     const walletImage = profileField(html, new RegExp(`"imageUrl":"(https://[^"]*/profiles/${key}/avatar/[^"]+)"`, 'i'));
+    // OpenSea's blue tick: the flag that follows the account's own record
+    // (or, without an account, the wallet's), never one elsewhere on the page.
+    const tickAfter = (at) => at >= 0 && /"profileIsVerified":true/.test(html.slice(at, at + 400));
+    const walletAt = html.search(new RegExp(`"imageUrl":"https://[^"]*/profiles/${key}/avatar/`, 'i'));
+    const verified = account ? tickAfter(account.index) : tickAfter(walletAt);
     profile = {
+      verified,
       address: key,
       name: accountName && !/^0x[0-9a-f]{40}$/i.test(accountName) ? accountName : '',
       ens: profileField(html, /"ensName":"([^"]+)"/),

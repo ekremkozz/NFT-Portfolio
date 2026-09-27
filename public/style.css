@@ -310,11 +310,16 @@ a.pf-history-move:hover span { color: var(--accent); }
 @keyframes pf-reading-pulse { 50% { opacity: .25; } }
 .pf-top .portfolio-wallets { position: relative; }
 .pf-wallet-trigger {
-  display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+  display: inline-block; position: relative; box-sizing: border-box; width: 150px; height: 32px;
+  padding: 0 26px 0 14px; line-height: 30px; text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2);
   color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer;
 }
-.pf-wallet-trigger::after { content: '\25BE'; color: var(--muted); font-size: 10px; }
+.pf-wallet-trigger::after {
+  content: '\25BE'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-size: 10px;
+}
 .pf-wallet-trigger:hover { border-color: var(--accent); }
 .pf-wallet-trigger.is-on { border-color: var(--accent); color: var(--accent); }
 .pf-wallet-menu {
@@ -714,8 +719,20 @@ section.tab[data-tab="portfolio"] .pf-stats { grid-template-columns: minmax(0, 1
 .pf-split.is-empty .pf-split-part { display: none; }
 .pf-split-part { flex: 0 1 0; min-width: 0; transition: flex-grow .3s; }
 /* The change under the figures, on a line of its own; a long one trims. */
-.pf-stat-move { display: flex; min-width: 0; min-height: 22px; }
-.pf-stat-move .move-pill { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-stat-move { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 22px; overflow: hidden; }
+.pf-stat-move .move-pill { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The next biggest moves beside the pill; what does not fit is left out. */
+.pf-move-more { display: flex; gap: 6px; min-width: 0; overflow: hidden; font-size: 12px; }
+.pf-move-more .pf-history-move { flex: none; height: 24px; box-sizing: border-box; }
+/* Initials standing in for a missing picture. */
+.pf-initials {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: 13px; letter-spacing: .02em; line-height: 1;
+}
+.pf-token-icon .pf-initials { font-size: 11px; }
+.pf-history-pic .pf-initials { font-size: 7.5px; }
+/* The blue tick beside a verified profile's name. */
+.pf-profile-name .pf-verified { vertical-align: -2px; margin-left: 2px; }
 .pf-stat-parts b { font-family: var(--mono); font-weight: 600; color: var(--text); margin-left: 4px; }
 
 /* A newer version is out: a small amber pill in the header. */

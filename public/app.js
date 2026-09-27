@@ -283,7 +283,16 @@ async function api(path, options = {}) {
   const response = await fetch(path, {
     ...options,
     headers: { 'content-type': 'application/json', ...(options.headers || {}) },
+    // A codespace just woken sends this page's requests to GitHub's sign-in
+    // first; followed, that looked like the app still being away.
+    redirect: 'manual',
   });
+  if (response.type === 'opaqueredirect') {
+    const error = new Error('Sign-in needed');
+    error.appGone = true;
+    error.signIn = true;
+    throw error;
+  }
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(body.error || `HTTP ${response.status}`);
@@ -736,8 +745,9 @@ async function loadPortfolio(force) {
   const summary = $('#portfolio-summary');
   const walletBox = $('#portfolio-wallets');
 
-  // Loading shows in the counter pill; this line is for errors only.
-  summary.textContent = '';
+  // Loading shows in the counter pill; this line is for errors only. The
+  // asleep note stays while asking again: cleared each time, it blinked.
+  if (!appAsleep) summary.textContent = '';
 
   let data;
   portfolioUpdating = true;
@@ -745,6 +755,20 @@ async function loadPortfolio(force) {
   try {
     data = await api('/api/portfolio');
   } catch (error) {
+    if (error.signIn) {
+      /*
+       * The codespace is back but wants this browser signed in again, which
+       * only a page load does (the redirect goes to github.com). At most once
+       * a minute, so a sign-in that keeps failing cannot loop.
+       */
+      let last = 0;
+      try { last = Number(sessionStorage.getItem('nftPortfolio.signInReload')) || 0; } catch { /* none */ }
+      if (Date.now() - last > 60000) {
+        try { sessionStorage.setItem('nftPortfolio.signInReload', String(Date.now())); } catch { /* not kept */ }
+        location.reload();
+        return;
+      }
+    }
     if (isAppGone(error)) {
       showAppAsleep();
     } else {
@@ -1507,6 +1531,23 @@ function verifiedBadge() {
 }
 
 /*
+ * A stand-in picture for a token or collection OpenSea has none for: its
+ * initials -- the first letter, or of two words the first of each (Glitter
+ * Gang: GG) -- on a colour picked from its name, the same every time.
+ */
+function initialsPicture(name) {
+  const words = String(name || '?').replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+  const letters = words.length > 1 ? words[0][0] + words[1][0] : (words[0] || '?')[0];
+  let hash = 0;
+  for (const ch of String(name || '')) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+  const el = document.createElement('span');
+  el.className = 'pf-initials';
+  el.style.background = `hsl(${hash % 360} 45% 34%)`;
+  el.textContent = letters.toUpperCase();
+  return el;
+}
+
+/*
  * The wallets holding a collection, as initials in a stack. A colour per
  * wallet, derived from its address, so the same wallet looks the same on
  * every row.
@@ -1587,6 +1628,7 @@ function portfolioRow(group) {
   const logo = document.createElement('span');
   logo.className = 'pf-logo';
   if (group.image) logo.appendChild(stillImage(group.image, 36, ''));
+  else logo.appendChild(initialsPicture(group.name));
   ident.appendChild(logo);
   const link = document.createElement('a');
   link.className = 'pf-name';
@@ -1860,6 +1902,7 @@ function renderPortfolioTokens(tokens) {
     // drawn here on white, the way OpenSea shows it.
     if ((token.symbol || '').toUpperCase() === 'ETH') icon.innerHTML = ETH_ON_WHITE;
     else if (token.image) icon.appendChild(stillImage(token.image, 30, ''));
+    else icon.appendChild(initialsPicture(token.name || token.symbol));
     const label = document.createElement('b');
     label.textContent = token.name || token.symbol;
     name.append(icon, tokenNameBlock(label, token));
@@ -2343,14 +2386,14 @@ async function openPortfolioHistory() {
           part.target = '_blank';
           part.rel = 'noopener noreferrer';
         }
-        // Its picture, small: ether drawn on white as in the token table.
-        if (eth || image) {
-          const pic = document.createElement('i');
-          pic.className = 'pf-history-pic';
-          if (eth) pic.innerHTML = ETH_ON_WHITE;
-          else pic.appendChild(stillImage(image, 18, ''));
-          part.appendChild(pic);
-        }
+        // Its picture, small: ether drawn on white as in the token table,
+        // and initials where there is no picture.
+        const pic = document.createElement('i');
+        pic.className = 'pf-history-pic';
+        if (eth) pic.innerHTML = ETH_ON_WHITE;
+        else if (image) pic.appendChild(stillImage(image, 18, ''));
+        else pic.appendChild(initialsPicture(move.name));
+        part.appendChild(pic);
         const name = document.createElement('span');
         name.textContent = move.name;
         const amount = document.createElement('b');
@@ -2651,13 +2694,41 @@ function paintPortfolioMove() {
       ? `${signed(net)} · ${top.name} ${signed(top.change)}`
       : signed(net);
   }
+  /*
+   * Beside the pill, the next two biggest moves either way, each a chip with
+   * its picture -- the pill names only the one that led.
+   */
+  const more = document.getElementById('portfolio-move-more');
+  if (!more) return;
+  forgetPictures(more);
+  more.textContent = '';
+  if (!portfolioMove) return;
+  const pictureOf = new Map();
+  for (const group of portfolioGroups) if (group.image) pictureOf.set(group.name, group.image);
+  for (const token of portfolioTokens) if (token.image) pictureOf.set(token.name || token.symbol, token.image);
+  for (const move of portfolioMove.others) {
+    const chip = document.createElement('span');
+    chip.className = `pf-history-move ${move.change > 0 ? 'is-up' : 'is-down'}`;
+    const pic = document.createElement('i');
+    pic.className = 'pf-history-pic';
+    const image = pictureOf.get(move.name);
+    pic.appendChild(image ? stillImage(image, 18, '') : initialsPicture(move.name));
+    const name = document.createElement('span');
+    name.textContent = move.name;
+    const amount = document.createElement('b');
+    amount.textContent = signed(move.change);
+    chip.append(pic, name, amount);
+    more.appendChild(chip);
+  }
 }
 
 function notePortfolioMove(event) {
   portfolioMove = null;
   if (event && event.net) {
     const top = (event.moves || []).find((m) => Math.sign(m.change) === Math.sign(event.net)) || null;
-    portfolioMove = { net: event.net, top, since: event.since };
+    const others = (event.moves || []).filter((m) => m !== top)
+      .sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 2);
+    portfolioMove = { net: event.net, top, others, since: event.since };
   }
   paintPortfolioMove();
 }
@@ -2904,6 +2975,8 @@ function paintProfile() {
   const label = walletLabelMap[address.toLowerCase()];
   const name = $('#portfolio-profile-name');
   name.textContent = profile.name || profile.ens || label || short;
+  // OpenSea's blue tick, for the accounts it has verified.
+  if (profile.verified) name.append(' ', verifiedBadge());
   // The name opens this wallet's portfolio on OpenSea.
   name.href = `https://opensea.io/${address}/portfolio`;
   const parts = [short];
