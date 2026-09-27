@@ -265,6 +265,7 @@ function setLanguage(next) {
   if (typeof paintUpdateNote === 'function') paintUpdateNote();
   if (typeof syncPortfolioChips === 'function') syncPortfolioChips();
   if (appAsleep) showAppAsleep();
+  if (typeof paintProfile === 'function') paintProfile();
 }
 
 document.querySelectorAll('.lang-switch button').forEach((button) => {
@@ -572,6 +573,7 @@ function openSettings(firstRun = false) {
       await loadSettings();
       close();
       loadPortfolio(true);
+      loadProfile();
     } catch (err) {
       error.textContent = serverText(err.message);
     }
@@ -2799,6 +2801,42 @@ $('#update-check').addEventListener('click', async (event) => {
   }, 4000);
 });
 
+/*
+ * The card at the top: whose portfolio this is -- the main wallet's OpenSea
+ * name and picture, its address, and the first lines of its bio. Without a
+ * profile, the wallet's own label or address, and its first letters for a
+ * picture.
+ */
+let portfolioProfile = null;
+
+async function loadProfile() {
+  try { portfolioProfile = (await api('/api/profile')).profile; } catch { portfolioProfile = null; }
+  paintProfile();
+}
+
+function paintProfile() {
+  const wallets = settingsState.wallets || [];
+  const address = (portfolioProfile && portfolioProfile.address) || (wallets[0] && wallets[0].address) || '';
+  const card = $('#portfolio-profile');
+  if (!card) return;
+  card.hidden = !address;
+  if (!address) return;
+  const profile = portfolioProfile || {};
+  const short = `${address.slice(0, 6)}…${address.slice(-4)}`;
+  const label = walletLabelMap[address.toLowerCase()];
+  $('#portfolio-profile-name').textContent = profile.name || profile.ens || label || short;
+  const parts = [short];
+  if (profile.ens && profile.ens !== profile.name) parts.push(profile.ens);
+  if (wallets.length > 1) parts.push(t('nWallets', { n: wallets.length }));
+  $('#portfolio-profile-address').textContent = parts.join(' · ');
+  $('#portfolio-profile-bio').textContent = String(profile.bio || '').split('\n').map((line) => line.trim()).filter(Boolean).join(' · ');
+  const pic = $('#portfolio-profile-pic');
+  forgetPictures(pic);
+  pic.textContent = '';
+  if (profile.image) pic.appendChild(stillImage(profile.image, 48, ''));
+  else pic.textContent = address.slice(2, 4).toUpperCase();
+}
+
 /* ---------------------------------------------------------------- boot */
 
 /*
@@ -2816,7 +2854,7 @@ $('#portfolio-settings').addEventListener('click', () => openSettings(false));
 loadSettings()
   .then((settings) => {
     if (!settings.wallets.length) openSettings(true);
-    else loadPortfolio();
+    else { loadPortfolio(); loadProfile(); }
   })
   .catch((error) => {
     if (isAppGone(error)) showAppAsleep();

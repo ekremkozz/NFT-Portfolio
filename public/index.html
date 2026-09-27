@@ -37,23 +37,27 @@
     <section class="tab is-active" data-tab="portfolio">
       <div class="card">
         <div class="pf-top">
-          <!-- The balance as three cards: the whole, and the two parts of it.
-               On its own above the tables it read as a stray number. -->
+          <!-- Whose portfolio, and what it is worth: the main wallet's
+               OpenSea profile, then the whole with its two parts under it. -->
           <div class="pf-stats">
-            <div class="pf-stat">
+            <div class="pf-stat pf-profile" id="portfolio-profile">
+              <span class="pf-profile-pic" id="portfolio-profile-pic"></span>
+              <div class="pf-profile-text">
+                <b class="pf-profile-name" id="portfolio-profile-name"></b>
+                <span class="pf-profile-address" id="portfolio-profile-address"></span>
+                <span class="pf-profile-bio" id="portfolio-profile-bio"></span>
+              </div>
+            </div>
+            <div class="pf-stat pf-total">
               <span class="pf-stat-label" data-i18n="totalValue">Total value</span>
               <div class="pf-stat-row">
                 <b id="portfolio-total" class="pf-stat-value">—</b>
                 <span id="portfolio-move" class="move-pill"></span>
               </div>
-            </div>
-            <div class="pf-stat">
-              <span class="pf-stat-label">NFT</span>
-              <b id="portfolio-nft" class="pf-stat-value">—</b>
-            </div>
-            <div class="pf-stat">
-              <span class="pf-stat-label">Token</span>
-              <b id="portfolio-token" class="pf-stat-value">—</b>
+              <div class="pf-stat-parts">
+                <span>NFT <b id="portfolio-nft">—</b></span>
+                <span>Token <b id="portfolio-token">—</b></span>
+              </div>
             </div>
           </div>
           <!-- The controls as a fourth card beside the three figures: how old

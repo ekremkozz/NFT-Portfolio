@@ -584,6 +584,62 @@ async function openSeaPortfolioItems(addresses, extraItems = []) {
   };
 }
 
+/* ---------------------------------------------------------------- profile
+ *
+ * The main wallet's OpenSea profile, for the card at the top of the page:
+ * its name, picture, ENS name and bio. OpenSea serves no query for it; the
+ * profile page carries it as JSON inside its HTML, which is read here and
+ * cut down to those few fields. The page is over a megabyte, so the result
+ * is kept for six hours (a failure for ten minutes). Anything missing just
+ * leaves the card plainer: the address stands in for the name.
+ */
+const PROFILE_KEEP_MS = 6 * 3600 * 1000;
+const PROFILE_RETRY_MS = 10 * 60 * 1000;
+const profileCache = new Map();
+
+function profileField(html, pattern) {
+  const match = html.match(pattern);
+  if (!match) return '';
+  try { return JSON.parse(`"${match[1]}"`); } catch { return match[1]; }
+}
+
+async function openSeaProfile(address) {
+  const key = address.toLowerCase();
+  const cached = profileCache.get(key);
+  if (cached && Date.now() < cached.until) return cached.profile;
+  let profile = { address: key };
+  try {
+    const response = await fetch(`https://opensea.io/${key}`, {
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36',
+        accept: 'text/html',
+      },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const html = await response.text();
+    const str = '((?:[^"\\\\]|\\\\.)*)';
+    // The account's own name and picture, when the wallet belongs to one.
+    const account = html.match(new RegExp(`"profilesByAccount":\\{"account":\\{"address":"${key}","displayName":"${str}","imageUrl":"${str}"`, 'i'));
+    const accountName = account ? profileField(account[0], new RegExp(`"displayName":"${str}"`)) : '';
+    const accountImage = account ? profileField(account[0], new RegExp(`"imageUrl":"${str}"`)) : '';
+    const walletImage = profileField(html, new RegExp(`"imageUrl":"(https://[^"]*/profiles/${key}/avatar/[^"]+)"`, 'i'));
+    profile = {
+      address: key,
+      name: accountName && !/^0x[0-9a-f]{40}$/i.test(accountName) ? accountName : '',
+      ens: profileField(html, /"ensName":"([^"]+)"/),
+      image: accountImage || walletImage,
+      bio: profileField(html, new RegExp(`"bio":"${str}"`)),
+      joined: profileField(html, /"dateJoined":"([^"]+)"/),
+    };
+    profileCache.set(key, { profile, until: Date.now() + PROFILE_KEEP_MS });
+  } catch (error) {
+    console.log(`  Profile not read (${error.message})`);
+    profileCache.set(key, { profile, until: Date.now() + PROFILE_RETRY_MS });
+  }
+  return profile;
+}
+
 /*
  * One row per collection rather than per item. Holding twelve of something is
  * one position, and a table that lists it twelve times buries the eleven other
@@ -1153,6 +1209,13 @@ const server = http.createServer(async (req, res) => {
         (items.collections || []).reduce((sum, g) => sum + (g.valueUsd || 0), 0) + (tokens.tokenTotalUsd || 0),
       ) : null;
       return send(res, 200, { available: true, wallets, move, ...tokens, ...items });
+    }
+
+    // The main wallet's profile, for the card at the top.
+    if (route === '/api/profile' && req.method === 'GET') {
+      const { wallets: configured } = readConfig();
+      if (!configured.length) return send(res, 200, { profile: null });
+      return send(res, 200, { profile: await openSeaProfile(configured[0].address) });
     }
 
     /*
