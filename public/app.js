@@ -77,7 +77,7 @@ const STRINGS = {
     waking: 'Waking… this page carries on by itself',
     signInAgain: 'The codespace is back and wants you signed in again.',
     connect: 'Connect',
-    connecting: 'Connecting… this page carries on by itself',
+    connecting: 'Connecting… if the small window shows an error, leave it open: it tries again by itself',
     asleepLocal: 'The app is not running, so the figures are not updating. Start it with npm start; this page picks up by itself.',
     noItemsSelected: 'No items visible in the selected wallets.',
     noItems: 'No items visible in these wallets.',
@@ -177,7 +177,7 @@ const STRINGS = {
     waking: 'Uyanıyor… sayfa kendiliğinden devam edecek',
     signInAgain: 'Codespace uyandı, yeniden giriş istiyor.',
     connect: 'Bağlan',
-    connecting: 'Bağlanıyor… sayfa kendiliğinden devam edecek',
+    connecting: 'Bağlanıyor… küçük pencere hata gösterirse kapatma, kendisi tekrar dener',
     asleepLocal: 'Uygulama çalışmıyor, rakamlar güncellenmiyor. npm start ile başlat; sayfa kendiliğinden devam eder.',
     noItemsSelected: 'Seçili cüzdanlarda görünen item yok.',
     noItems: 'Bu cüzdanlarda görünen item yok.',
@@ -374,6 +374,7 @@ function showAppAsleep() {
         wakeWindow = opened;
       }
       appWaking = true;
+      wakeClickedAt = Date.now();
       wake.textContent = t('waking');
       // Looked for every ten seconds while it starts, for a few minutes.
       const started = Date.now();
@@ -399,10 +400,18 @@ let wakeWindow = null;
  */
 let signInWindow = null;
 let signInStarted = 0;
+// When the sign-in was first asked for, and the wake clicked: Connect waits
+// for the codespace to be likely up, so its window does not open onto an error.
+let signInAskedAt = 0;
+let wakeClickedAt = 0;
+let connectTimer = null;
+const CONNECT_AFTER_WAKE_MS = 60 * 1000;
+const CONNECT_AFTER_ASK_MS = 20 * 1000;
 
 function showAppSignIn() {
   appAsleep = true;
   appAsleepTriedAt = Date.now();
+  if (!signInAskedAt) signInAskedAt = Date.now();
   const summary = $('#portfolio-summary');
   summary.classList.add('is-asleep');
   if (signInStarted) return;              // already connecting: leave the note be
@@ -410,7 +419,16 @@ function showAppSignIn() {
   const connect = document.createElement('button');
   connect.type = 'button';
   connect.className = 'btn btn-mini pf-wake';
-  connect.textContent = t('connect');
+  const readyAt = Math.max(signInAskedAt + CONNECT_AFTER_ASK_MS, wakeClickedAt + CONNECT_AFTER_WAKE_MS);
+  const paintConnect = () => {
+    const left = Math.ceil((readyAt - Date.now()) / 1000);
+    connect.disabled = left > 0;
+    connect.textContent = left > 0 ? `${t('connect')} (${left})` : t('connect');
+    if (left <= 0) { clearInterval(connectTimer); connectTimer = null; }
+  };
+  clearInterval(connectTimer);
+  paintConnect();
+  if (connect.disabled) connectTimer = setInterval(paintConnect, 1000);
   connect.addEventListener('click', () => {
     const signInUrl = `${location.origin}/api/settings`;
     signInWindow = window.open(signInUrl, 'nftPortfolioSignIn', 'width=520,height=640');
@@ -419,7 +437,8 @@ function showAppSignIn() {
     summary.textContent = t('connecting');
     const tryAgain = () => {
       if (!appAsleep) return;
-      if (Date.now() - signInStarted > 5 * 60 * 1000) {
+      // The window closed by hand before it got through: Connect again.
+      if (!signInWindow || signInWindow.closed || Date.now() - signInStarted > 5 * 60 * 1000) {
         signInStarted = 0;
         showAppSignIn();
         return;
@@ -429,7 +448,7 @@ function showAppSignIn() {
        * ever starts, and stays there. Sent to the same address again every
        * few seconds, it signs in once the codespace's port is ready.
        */
-      if (signInWindow && !signInWindow.closed && Date.now() - windowLoadedAt > 8000) {
+      if (Date.now() - windowLoadedAt > 8000) {
         try { signInWindow.location.href = signInUrl; } catch { /* closed meanwhile */ }
         windowLoadedAt = Date.now();
       }
@@ -445,6 +464,10 @@ function clearAppAsleep() {
     try { wakeWindow.close(); } catch { /* closed by hand */ }
     wakeWindow = null;
   }
+  signInAskedAt = 0;
+  wakeClickedAt = 0;
+  clearInterval(connectTimer);
+  connectTimer = null;
   if (signInStarted) {
     signInStarted = 0;
     try { signInWindow && signInWindow.close(); } catch { /* already closed */ }
