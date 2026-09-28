@@ -1380,6 +1380,8 @@ function openPortfolioItems(group, row) {
     return at < 0 ? portfolioWalletList.length : at;
   };
   const byWallet = [...group.items].sort((a, b) => walletOrder(a.owner) - walletOrder(b.owner));
+  // Which wallet a piece is in, only when this collection's pieces are in more than one.
+  const spread = new Set(group.items.map((item) => item.owner).filter(Boolean)).size > 1;
 
   const pieceCell = (item, index) => {
     const cell = document.createElement(itemPageUrl(item, group) ? 'a' : 'div');
@@ -1408,8 +1410,7 @@ function openPortfolioItems(group, row) {
     text.appendChild(label);
     const tags = document.createElement('span');
     tags.className = 'pf-item-tags';
-    // Which wallet, only when there is more than one to tell apart.
-    if (item.owner && portfolioWalletList.length > 1) tags.appendChild(walletPill(item.owner));
+    if (item.owner && spread) tags.appendChild(walletPill(item.owner));
     // OpenSea's rarity rank, in its tier's colour.
     if (item.rarityRank) {
       const tag = document.createElement('span');
