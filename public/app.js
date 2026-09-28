@@ -360,7 +360,19 @@ function showAppAsleep() {
     wake.rel = 'noopener noreferrer';
     wake.href = name !== location.hostname ? `https://${name}.github.dev` : 'https://github.com/codespaces';
     wake.textContent = appWaking ? t('waking') : t('wakeCodespace');
-    wake.addEventListener('click', () => {
+    wake.addEventListener('click', (event) => {
+      /*
+       * Opened from here, the tab can be closed from here: once the app is
+       * back and read again, the codespace's own tab has done its job. The
+       * codespace keeps running without it.
+       */
+      const opened = window.open('', 'nftPortfolioWake');
+      if (opened) {
+        event.preventDefault();
+        try { opened.opener = null; } catch { /* already elsewhere */ }
+        opened.location.href = wake.href;
+        wakeWindow = opened;
+      }
       appWaking = true;
       wake.textContent = t('waking');
       // Looked for every ten seconds while it starts, for a few minutes.
@@ -376,6 +388,7 @@ function showAppAsleep() {
 }
 
 let appWaking = false;
+let wakeWindow = null;
 
 /*
  * Back, but asking for sign-in again. Reloading the page for it went wrong
@@ -428,6 +441,10 @@ function showAppSignIn() {
 }
 
 function clearAppAsleep() {
+  if (wakeWindow) {
+    try { wakeWindow.close(); } catch { /* closed by hand */ }
+    wakeWindow = null;
+  }
   if (signInStarted) {
     signInStarted = 0;
     try { signInWindow && signInWindow.close(); } catch { /* already closed */ }
