@@ -1521,20 +1521,52 @@ function openPortfolioItems(group, row) {
         button.classList.toggle('is-on', view.manual);
       }, 'is-manual'));
     }
-    const sort = document.createElement('select');
-    sort.className = 'pf-items-sort';
+    /*
+     * The order, as the wallet menu does it: a pill that opens a list, not
+     * the browser's own select, which drew the system's menu over the page.
+     */
     const ranked = byWallet.some((item) => item.rarityRank);
     const orders = [['id-asc', 'Token # ↑'], ['id-desc', 'Token # ↓']];
     if (ranked) orders.push(['rarity', t('byRarity')]);
     orders.push(['wallet', t('byWallet')]);
+    const sortBox = document.createElement('div');
+    sortBox.className = 'pf-sort-menu';
+    const sortButton = document.createElement('button');
+    sortButton.type = 'button';
+    sortButton.className = 'pf-wallet-trigger pf-sort-trigger';
+    sortButton.setAttribute('aria-haspopup', 'true');
+    const sortList = document.createElement('div');
+    sortList.className = 'pf-wallet-menu hidden';
+    const paintSort = () => {
+      sortButton.textContent = (orders.find(([value]) => value === view.sort) || orders[0])[1];
+      sortList.querySelectorAll('.pf-wallet-option').forEach((option) => {
+        option.classList.toggle('is-on', option.dataset.value === view.sort);
+      });
+    };
     for (const [value, text] of orders) {
-      const option = document.createElement('option');
-      option.value = value;
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'portfolio-wallet pf-wallet-option is-radio';
+      option.dataset.value = value;
       option.textContent = text;
-      sort.appendChild(option);
+      option.addEventListener('click', () => {
+        view.sort = value;
+        sortList.classList.add('hidden');
+        paintSort();
+        drawPieces();
+      });
+      sortList.appendChild(option);
     }
-    sort.addEventListener('change', () => { view.sort = sort.value; drawPieces(); });
-    tools.appendChild(sort);
+    sortButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      sortList.classList.toggle('hidden');
+    });
+    sortList.addEventListener('click', (event) => event.stopPropagation());
+    // A click anywhere else in the pop-up closes the list.
+    card.addEventListener('click', () => sortList.classList.add('hidden'));
+    paintSort();
+    sortBox.append(sortButton, sortList);
+    tools.appendChild(sortBox);
     card.appendChild(tools);
   }
   drawPieces();
