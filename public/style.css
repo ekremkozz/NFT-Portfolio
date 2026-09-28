@@ -462,8 +462,9 @@ a.pf-item-cell:hover { background: #262626; border-color: rgba(255, 255, 255, .1
 .pf-item-pic canvas, .pf-item-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pf-item-label {
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: calc(13.5px * var(--s, 1)); color: var(--muted);
+  font-size: calc(13.5px * var(--s, 1)); color: var(--text);
 }
+.pf-item-label b { font-weight: 700; }
 a.pf-item-cell:hover .pf-item-label { color: var(--accent); }
 .pf-num { text-align: right; }
 .pf-head .pf-num { justify-self: end; }

@@ -1398,7 +1398,16 @@ function openPortfolioItems(group, row) {
     if (picture) pic.appendChild(stillImage(picture, 72, ''));
     const label = document.createElement('span');
     label.className = 'pf-item-label';
-    label.textContent = item.name || `#${item.tokenId}`;
+    // The name in white, its number -- from the last # on -- in bold.
+    const name = item.name || `#${item.tokenId}`;
+    const hash = name.lastIndexOf('#');
+    if (hash >= 0) {
+      const number = document.createElement('b');
+      number.textContent = name.slice(hash);
+      label.append(name.slice(0, hash), number);
+    } else {
+      label.textContent = name;
+    }
     /*
      * The name, and under it a line of pills -- not beside it, where they cut
      * the name short: the wallet holding the piece, by its label, in that
