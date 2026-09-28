@@ -468,6 +468,8 @@ a.pf-item-cell:hover { background: #262626; border-color: rgba(255, 255, 255, .1
   font-size: calc(13.5px * var(--s, 1)); color: var(--text);
 }
 .pf-item-label b { font-weight: 700; flex: none; }
+/* Numbers alone, when the name is the collection's: a size larger. */
+.pf-item-label.is-number { font-size: calc(15px * var(--s, 1)); }
 a.pf-item-cell:hover .pf-item-label { color: var(--accent); }
 .pf-num { text-align: right; }
 .pf-head .pf-num { justify-self: end; }

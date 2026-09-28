@@ -1382,6 +1382,14 @@ function openPortfolioItems(group, row) {
   const byWallet = [...group.items].sort((a, b) => walletOrder(a.owner) - walletOrder(b.owner));
   // Which wallet a piece is in, only when this collection's pieces are in more than one.
   const spread = new Set(group.items.map((item) => item.owner).filter(Boolean)).size > 1;
+  /*
+   * Every piece called the same thing and a number ("Blokyz #12"): the name
+   * says nothing the collection's row above does not, so only the numbers
+   * are shown. A collection whose names differ keeps them whole.
+   */
+  const NAME_NUMBER = /^(.*?)\s*(#\d+)\s*$/;
+  const stems = new Set(group.items.map((item) => (String(item.name || '').match(NAME_NUMBER) || [, null])[1]));
+  const numbersOnly = group.items.length > 1 && stems.size === 1 && !stems.has(null);
 
   const pieceCell = (item, index) => {
     const cell = document.createElement(itemPageUrl(item, group) ? 'a' : 'div');
@@ -1400,9 +1408,9 @@ function openPortfolioItems(group, row) {
     label.className = 'pf-item-label';
     // The name in white; a number it ends with (#123) in bold, and always shown.
     const name = item.name || `#${item.tokenId}`;
-    const ending = name.match(/^(.*?)\s*(#\d+)\s*$/);
+    const ending = name.match(NAME_NUMBER);
     if (ending) {
-      if (ending[1]) {
+      if (ending[1] && !numbersOnly) {
         const base = document.createElement('span');
         base.className = 'pf-item-base';
         base.textContent = ending[1];
@@ -1425,6 +1433,7 @@ function openPortfolioItems(group, row) {
      */
     const text = document.createElement('span');
     text.className = 'pf-item-text';
+    if (numbersOnly) label.classList.add('is-number');
     text.appendChild(label);
     const tags = document.createElement('span');
     tags.className = 'pf-item-tags';
