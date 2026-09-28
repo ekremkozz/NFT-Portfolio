@@ -399,8 +399,10 @@ function showAppSignIn() {
   connect.className = 'btn btn-mini pf-wake';
   connect.textContent = t('connect');
   connect.addEventListener('click', () => {
-    signInWindow = window.open(`${location.origin}/api/settings`, 'nftPortfolioSignIn', 'width=520,height=640');
+    const signInUrl = `${location.origin}/api/settings`;
+    signInWindow = window.open(signInUrl, 'nftPortfolioSignIn', 'width=520,height=640');
     signInStarted = Date.now();
+    let windowLoadedAt = Date.now();
     summary.textContent = t('connecting');
     const tryAgain = () => {
       if (!appAsleep) return;
@@ -408,6 +410,15 @@ function showAppSignIn() {
         signInStarted = 0;
         showAppSignIn();
         return;
+      }
+      /*
+       * Opened too early, the window lands on an error before the sign-in
+       * ever starts, and stays there. Sent to the same address again every
+       * few seconds, it signs in once the codespace's port is ready.
+       */
+      if (signInWindow && !signInWindow.closed && Date.now() - windowLoadedAt > 8000) {
+        try { signInWindow.location.href = signInUrl; } catch { /* closed meanwhile */ }
+        windowLoadedAt = Date.now();
       }
       loadPortfolio(true).finally(() => setTimeout(tryAgain, 4000));
     };
