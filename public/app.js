@@ -291,6 +291,7 @@ function setLanguage(next) {
   if (appAsleep) showAppAsleep();
   if (typeof paintProfile === 'function') paintProfile();
   if (typeof paintSupport === 'function') paintSupport();
+  if (typeof paintPortfolioMove === 'function') paintPortfolioMove();
 }
 
 document.querySelectorAll('.lang-switch button').forEach((button) => {
