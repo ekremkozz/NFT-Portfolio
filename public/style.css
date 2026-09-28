@@ -255,6 +255,10 @@ a.pf-history-move:hover span { color: var(--accent); }
   padding: 0 7px; border-radius: 999px; line-height: calc(16px * var(--s, 1));
   font-size: calc(10.5px * var(--s, 1)); font-weight: 600; white-space: nowrap;
 }
+.pf-item-tag.is-rarity { font-family: var(--mono); color: var(--muted); background: rgba(255, 255, 255, .06); border: 1px solid var(--line); }
+.pf-item-tag.is-legendary { color: #ffb547; background: rgba(255, 181, 71, .12); border-color: rgba(255, 181, 71, .4); }
+.pf-item-tag.is-epic { color: #c38bff; background: rgba(195, 139, 255, .12); border-color: rgba(195, 139, 255, .4); }
+.pf-item-tag.is-rare { color: #5aa9ff; background: rgba(90, 169, 255, .12); border-color: rgba(90, 169, 255, .4); }
 .pf-item-tag.is-manual { color: var(--amber); background: rgba(245, 166, 35, .12); border: 1px solid rgba(245, 166, 35, .35); }
 .pf-item-tag.is-wallet {
   color: #fff; background: color-mix(in srgb, var(--wallet) 45%, transparent);

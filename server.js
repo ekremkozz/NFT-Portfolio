@@ -367,6 +367,9 @@ function flattenItem(item) {
     offerUsd: Number(offer.usd) || 0,
     offerUnit: offer.token?.unit ?? offer.native?.unit ?? null,
     offerSymbol: offer.token?.symbol || '',
+    // OpenSea's rarity: its rank in the collection and the tier it falls in.
+    rarityRank: Number(item.rarity?.rank) || 0,
+    rarityTier: item.rarity?.category || '',
   };
 }
 
@@ -424,9 +427,11 @@ function loadCrawl(key) {
   try {
     const raw = JSON.parse(fs.readFileSync(ITEMS_CACHE_PATH, 'utf8'));
     if (raw.key !== key || !Array.isArray(raw.items)) return null;
+    // Kept before rarity was read: shown, and read again in the background.
+    const stale = raw.items.length && !raw.items.some((item) => 'rarityRank' in item);
     return {
       key, items: new Map(raw.items.map((item) => [item.id, item])), complete: true,
-      progress: raw.items.length, running: null, fullAt: Number(raw.fullAt) || 0,
+      progress: raw.items.length, running: null, fullAt: stale ? 0 : Number(raw.fullAt) || 0,
       quickAt: Number(raw.quickAt) || 0, pages: Number(raw.pages) || 0, error: '',
     };
   } catch {
@@ -674,6 +679,8 @@ function groupByCollection(items) {
       chain: item.chain,
       owner: item.owner,
       manual: item.manual || null,
+      rarityRank: item.rarityRank || 0,
+      rarityTier: item.rarityTier || '',
     });
     if (item.owner && !group.wallets.includes(item.owner)) group.wallets.push(item.owner);
   }

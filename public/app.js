@@ -91,6 +91,7 @@ const STRINGS = {
     noMatch: 'Nothing matches the search.',
     all: 'All',
     byWallet: 'By wallet',
+    byRarity: 'Rarity',
     tokensError: 'Tokens could not be read from OpenSea. Refresh to try again.',
     noTokens: 'No tokens in these wallets.',
     backToTop: 'Back to the top',
@@ -191,6 +192,7 @@ const STRINGS = {
     noMatch: 'Aramayla eşleşen yok.',
     all: 'Tümü',
     byWallet: 'Cüzdana göre',
+    byRarity: 'Rarity',
     tokensError: 'Tokenler OpenSea\u2019den okunamadı. Tekrar denemek için yenile.',
     noTokens: 'Bu cüzdanlarda token yok.',
     backToTop: 'Başa dön',
@@ -1408,6 +1410,13 @@ function openPortfolioItems(group, row) {
     tags.className = 'pf-item-tags';
     // Which wallet, only when there is more than one to tell apart.
     if (item.owner && portfolioWalletList.length > 1) tags.appendChild(walletPill(item.owner));
+    // OpenSea's rarity rank, in its tier's colour.
+    if (item.rarityRank) {
+      const tag = document.createElement('span');
+      tag.className = `pf-item-tag is-rarity is-${String(item.rarityTier || 'none').toLowerCase()}`;
+      tag.textContent = `#${item.rarityRank}`;
+      tags.appendChild(tag);
+    }
     if (item.manual) {
       const tag = document.createElement('span');
       tag.className = 'pf-item-tag is-manual';
@@ -1454,6 +1463,10 @@ function openPortfolioItems(group, row) {
     });
     if (view.sort === 'id-asc') shown = [...shown].sort(tokenOrder);
     if (view.sort === 'id-desc') shown = [...shown].sort((a, b) => tokenOrder(b, a));
+    // Rarest first; pieces without a rank last, by token number.
+    if (view.sort === 'rarity') {
+      shown = [...shown].sort((a, b) => (a.rarityRank || Infinity) - (b.rarityRank || Infinity) || tokenOrder(a, b));
+    }
     forgetPictures(grid);
     grid.textContent = '';
     shown.forEach((item, index) => grid.appendChild(pieceCell(item, index)));
@@ -1509,7 +1522,11 @@ function openPortfolioItems(group, row) {
     }
     const sort = document.createElement('select');
     sort.className = 'pf-items-sort';
-    for (const [value, text] of [['id-asc', 'Token # ↑'], ['id-desc', 'Token # ↓'], ['wallet', t('byWallet')]]) {
+    const ranked = byWallet.some((item) => item.rarityRank);
+    const orders = [['id-asc', 'Token # ↑'], ['id-desc', 'Token # ↓']];
+    if (ranked) orders.push(['rarity', t('byRarity')]);
+    orders.push(['wallet', t('byWallet')]);
+    for (const [value, text] of orders) {
       const option = document.createElement('option');
       option.value = value;
       option.textContent = text;
@@ -1522,6 +1539,8 @@ function openPortfolioItems(group, row) {
   drawPieces();
 
   card.append(grid);
+  // Back to the first piece, once scrolled a long way down a large collection.
+  attachScrollTop(grid);
   /*
    * The row clicked stays sharp above the blur, with the table's column
    * headings right over it, the pair framed as a piece of the table -- its
