@@ -402,6 +402,39 @@ const BY_OFFER = { by: 'TOP_OFFER', direction: 'DESC' };
 let crawl = null;
 
 /*
+ * The list is kept on disk as well. An update restarts the app, and the
+ * list only in memory was read again from nothing each time -- minutes, on
+ * a large wallet, with the tables filling up from empty. Kept, it is back
+ * the moment the app is, and read again in the background only when due.
+ */
+const ITEMS_CACHE_PATH = path.join(DATA_DIR, 'items-cache.json');
+
+function saveCrawl(state) {
+  try {
+    writeFileAtomic(ITEMS_CACHE_PATH, JSON.stringify({
+      key: state.key, fullAt: state.fullAt, quickAt: state.quickAt, pages: state.pages,
+      items: [...state.items.values()],
+    }));
+  } catch (error) {
+    console.log(`  Items: not kept on disk (${error.message})`);
+  }
+}
+
+function loadCrawl(key) {
+  try {
+    const raw = JSON.parse(fs.readFileSync(ITEMS_CACHE_PATH, 'utf8'));
+    if (raw.key !== key || !Array.isArray(raw.items)) return null;
+    return {
+      key, items: new Map(raw.items.map((item) => [item.id, item])), complete: true,
+      progress: raw.items.length, running: null, fullAt: Number(raw.fullAt) || 0,
+      quickAt: Number(raw.quickAt) || 0, pages: Number(raw.pages) || 0, error: '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+/*
  * Pages in the given order until the list ends, `maxPages` are read, or
  * onPage says stop. Resolves to the pages read.
  */
@@ -460,6 +493,7 @@ function startFullRead(state, addresses) {
       state.pages = pages;
       state.fullAt = Date.now();
       state.quickAt = Date.now();
+      saveCrawl(state);
     })
     .catch((error) => {
       state.error = error.message;
@@ -492,11 +526,17 @@ async function quickRead(state, addresses) {
     });
   }
   state.quickAt = Date.now();
+  saveCrawl(state);
 }
 
 async function openSeaPortfolioItems(addresses, extraItems = []) {
   const key = addresses.join(',');
-  if (!crawl || crawl.key !== key) {
+  const saved = (!crawl || crawl.key !== key) ? loadCrawl(key) : null;
+  if (saved) {
+    // Back from disk: shown at once, read again in the background if due.
+    crawl = saved;
+    if (Date.now() - crawl.fullAt > fullReadEvery(crawl)) startFullRead(crawl, addresses);
+  } else if (!crawl || crawl.key !== key) {
     crawl = { key, items: new Map(), complete: false, progress: 0, running: null, fullAt: 0, quickAt: 0, pages: 0, error: '' };
     startFullRead(crawl, addresses);
     // The first answer waits for the first few pages, not for all of them.
