@@ -682,6 +682,7 @@ select:-webkit-autofill {
 }
 @keyframes pf-spin { to { transform: rotate(360deg); } }
 .pf-error-line { line-height: 26px; }
+.pf-error-line.is-note { color: var(--green); }
 
 /* Each piece's place in the pop-up's list, small in its top-right corner. */
 .pf-item-cell { position: relative; }

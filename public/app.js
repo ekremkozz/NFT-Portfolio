@@ -76,6 +76,7 @@ const STRINGS = {
     wakeCodespace: 'Wake it up',
     waking: 'Waking… this page carries on by itself',
     signInAgain: 'The codespace is back and wants you signed in again.',
+    wakeTabNote: 'Back. You can close the codespace window; the codespace keeps running.',
     connect: 'Connect',
     connecting: 'Connecting… if the small window shows an error, leave it open: it tries again by itself',
     asleepLocal: 'The app is not running, so the figures are not updating. Start it with npm start; this page picks up by itself.',
@@ -177,6 +178,7 @@ const STRINGS = {
     wakeCodespace: 'Uyandır',
     waking: 'Uyanıyor… sayfa kendiliğinden devam edecek',
     signInAgain: 'Codespace uyandı, yeniden giriş istiyor.',
+    wakeTabNote: 'Geri geldi. Açılan codespace penceresini kapatabilirsin; codespace çalışmaya devam eder.',
     connect: 'Bağlan',
     connecting: 'Bağlanıyor… küçük pencere hata gösterirse kapatma, kendisi tekrar dener',
     asleepLocal: 'Uygulama çalışmıyor, rakamlar güncellenmiyor. npm start ile başlat; sayfa kendiliğinden devam eder.',
@@ -377,13 +379,14 @@ function showAppAsleep() {
        * back and read again, the codespace's own tab has done its job. The
        * codespace keeps running without it.
        */
-      const opened = window.open('', 'nftPortfolioWake');
-      if (opened) {
-        event.preventDefault();
-        try { opened.opener = null; } catch { /* already elsewhere */ }
-        opened.location.href = wake.href;
-        wakeWindow = opened;
-      }
+      /*
+       * In a small window rather than a tab, out of the way of this page.
+       * It cannot be closed from here: GitHub's codespace page cuts itself
+       * off from the page that opened it (Cross-Origin-Opener-Policy), so
+       * once the app is back the page says it may be closed instead.
+       */
+      const opened = window.open(wake.href, 'nftPortfolioWake', 'width=900,height=640');
+      if (opened) event.preventDefault();
       appWaking = true;
       wakeClickedAt = Date.now();
       markWaking();
@@ -400,7 +403,7 @@ function showAppAsleep() {
 }
 
 let appWaking = false;
-let wakeWindow = null;
+let wakeNoteUntil = 0;
 
 /*
  * Back, but asking for sign-in again. Reloading the page for it went wrong
@@ -478,10 +481,8 @@ function showAppSignIn() {
 }
 
 function clearAppAsleep() {
-  if (wakeWindow) {
-    try { wakeWindow.close(); } catch { /* closed by hand */ }
-    wakeWindow = null;
-  }
+  // Woken from here: the codespace's window is left open, so say it may go.
+  if (wakeClickedAt && appAsleep) wakeNoteUntil = Date.now() + 20000;
   signInAskedAt = 0;
   wakeClickedAt = 0;
   clearInterval(connectTimer);
@@ -1019,6 +1020,15 @@ async function loadPortfolio(force) {
    * contradicted the cards underneath it as soon as one was deselected.
    */
   summary.textContent = '';
+  if (wakeNoteUntil > Date.now()) {
+    summary.textContent = t('wakeTabNote');
+    summary.classList.add('is-note');
+    setTimeout(() => {
+      if (summary.textContent === t('wakeTabNote')) summary.textContent = '';
+      summary.classList.remove('is-note');
+      wakeNoteUntil = 0;
+    }, wakeNoteUntil - Date.now());
+  }
 
   /*
    * The server is still reading a long item list: the counter follows its
