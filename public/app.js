@@ -1398,15 +1398,24 @@ function openPortfolioItems(group, row) {
     if (picture) pic.appendChild(stillImage(picture, 72, ''));
     const label = document.createElement('span');
     label.className = 'pf-item-label';
-    // The name in white, its number -- from the last # on -- in bold.
+    // The name in white; a number it ends with (#123) in bold, and always shown.
     const name = item.name || `#${item.tokenId}`;
-    const hash = name.lastIndexOf('#');
-    if (hash >= 0) {
+    const ending = name.match(/^(.*?)\s*(#\d+)\s*$/);
+    if (ending) {
+      if (ending[1]) {
+        const base = document.createElement('span');
+        base.className = 'pf-item-base';
+        base.textContent = ending[1];
+        label.append(base);
+      }
       const number = document.createElement('b');
-      number.textContent = name.slice(hash);
-      label.append(name.slice(0, hash), number);
+      number.textContent = ending[2];
+      label.append(number);
     } else {
-      label.textContent = name;
+      const whole = document.createElement('span');
+      whole.className = 'pf-item-base';
+      whole.textContent = name;
+      label.append(whole);
     }
     /*
      * The name, and under it a line of pills -- not beside it, where they cut

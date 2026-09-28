@@ -249,7 +249,10 @@ a.pf-history-move:hover span { color: var(--accent); }
 .pf-manual-remove { width: 28px; height: 28px; padding: 0; justify-content: center; flex: none; }
 .pf-manual-remove svg { width: 13px; height: 13px; }
 .pf-item-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.pf-item-text .pf-item-label { display: block; }
+/* Clear of the piece's place in the corner: a long name never runs under it. */
+.pf-item-text { padding-right: calc(24px * var(--s, 1)); }
+.pf-item-text .pf-item-label { display: flex; gap: .3em; }
+.pf-item-base { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .pf-item-tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .pf-item-tag {
   padding: 0 7px; border-radius: 999px; line-height: calc(16px * var(--s, 1));
@@ -464,7 +467,7 @@ a.pf-item-cell:hover { background: #262626; border-color: rgba(255, 255, 255, .1
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: calc(13.5px * var(--s, 1)); color: var(--text);
 }
-.pf-item-label b { font-weight: 700; }
+.pf-item-label b { font-weight: 700; flex: none; }
 a.pf-item-cell:hover .pf-item-label { color: var(--accent); }
 .pf-num { text-align: right; }
 .pf-head .pf-num { justify-self: end; }
