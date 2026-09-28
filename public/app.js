@@ -359,8 +359,17 @@ function showAppAsleep() {
     wake.target = '_blank';
     wake.rel = 'noopener noreferrer';
     wake.href = name !== location.hostname ? `https://${name}.github.dev` : 'https://github.com/codespaces';
-    wake.textContent = appWaking ? t('waking') : t('wakeCodespace');
+    wake.textContent = t('wakeCodespace');
+    // Once clicked it is a status, not a button: no second click, no link.
+    const markWaking = () => {
+      wake.textContent = t('waking');
+      wake.classList.add('is-waking');
+      wake.removeAttribute('href');
+      wake.setAttribute('aria-disabled', 'true');
+    };
+    if (appWaking) markWaking();
     wake.addEventListener('click', (event) => {
+      if (appWaking) { event.preventDefault(); return; }
       /*
        * Opened from here, the tab can be closed from here: once the app is
        * back and read again, the codespace's own tab has done its job. The
@@ -375,7 +384,7 @@ function showAppAsleep() {
       }
       appWaking = true;
       wakeClickedAt = Date.now();
-      wake.textContent = t('waking');
+      markWaking();
       // Looked for every ten seconds while it starts, for a few minutes.
       const started = Date.now();
       const tryAgain = () => {
