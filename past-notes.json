@@ -29,5 +29,18 @@
   "GitHub and support links in the header; steadier table height": { "tr": "Başlıkta GitHub ve destek linkleri; tablo yüksekliği daha sabit" },
   "Tables end at the window's edge, footer included": { "tr": "Tablolar alt yazıyla birlikte pencerenin kenarında bitiyor" },
   "Setup window no longer resets while an address is typed": { "tr": "Kurulum penceresi adres yazılırken sıfırlanmıyor" },
-  "NFT Portfolio Lite: first version": { "tr": "NFT Portfolio Lite: ilk sürüm" }
+  "NFT Portfolio Lite: first version": { "tr": "NFT Portfolio Lite: ilk sürüm" },
+  "Connect waits for the codespace, and comes back if its window is closed early": { "tr": "Bağlan artık codespace'in açılmasını bekliyor (geri sayım), küçük pencere erken kapatılırsa düğme yeniden çıkıyor." },
+  "The item list is kept on disk: an update or restart no longer reads it again from nothing": { "tr": "Item listesi artık diske kaydediliyor: güncelleme ya da yeniden başlatma sonrası itemler baştan okunmuyor, tablolar hemen geliyor." },
+  "Wake it up: the codespace tab it opens closes by itself once the app is back": { "tr": "Uyandır: açtığı codespace sekmesi, uygulama geri gelip rakamlar okununca kendiliğinden kapanır." },
+  "Connect: the sign-in window tries again until the woken codespace's port is ready": { "tr": "Bağlan: giriş penceresi artık codespace hazır olana kadar birkaç saniyede bir yeniden dener; erken açılınca hatada kalıp sayfayı bekletmiyor." },
+  "Last change follows the language switch instead of keeping the old language": { "tr": "Son değişim kartı dil değişince artık eski dilde kalmıyor." },
+  "Header buttons end at the card's right edge, the name starts at its left": { "tr": "Üstteki düğmeler artık alttaki kartın sağ kenarına, başlık sol kenarına hizalı." },
+  "Tips: a long address wraps inside the card instead of running past it": { "tr": "İpuçları: uzun bir adres artık kutunun dışına taşmıyor, içinde alt satıra geçiyor." },
+  "Support me at the top right: copies the author's address; the support mint is dropped": { "tr": "Sağ üstte Destek ol düğmesi: geliştiricinin adresini kopyalar; destek mint'i kaldırıldı. Ekran görüntüleri yenilendi." },
+  "A woken codespace asking for sign-in: Connect in a small window instead of reloading the page": { "tr": "Uyanan codespace yeniden giriş isteyince sayfa artık kendini yenilemiyor; Bağlan düğmesi girişi küçük bir pencerede yapar, sayfa uygulama hazır olunca kendiliğinden devam eder." },
+  "README: a full Turkish section, Last change marked on the annotated images": { "tr": "README: Türkçe bölüm İngilizcesinin tam karşılığı oldu; açıklamalı görsellerde Son değişim kartı ayrıca işaretlendi." },
+  "README screenshots retaken on a larger wallet, with the current interface": { "tr": "README ekran görüntüleri daha büyük bir cüzdanla ve güncel arayüzle yeniden çekildi." },
+  "Settings: change animations as an on/off switch": { "tr": "Ayarlar: değişim animasyonları artık açık/kapalı anahtarı; durumu bir bakışta okunuyor." },
+  "Change animations: a new change's amount rises over its row and the Last change card": { "tr": "Değişim animasyonları: yeni bir değişimin tutarı koleksiyon satırının ve Son değişim kartının üstünde yükselip kaybolur; Ayarlar'dan kapatılabilir." }
 }

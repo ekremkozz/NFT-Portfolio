@@ -405,7 +405,7 @@ let signInStarted = 0;
 let signInAskedAt = 0;
 let wakeClickedAt = 0;
 let connectTimer = null;
-const CONNECT_AFTER_WAKE_MS = 60 * 1000;
+const CONNECT_AFTER_WAKE_MS = 45 * 1000;
 const CONNECT_AFTER_ASK_MS = 20 * 1000;
 
 function showAppSignIn() {
@@ -430,17 +430,24 @@ function showAppSignIn() {
   paintConnect();
   if (connect.disabled) connectTimer = setInterval(paintConnect, 1000);
   connect.addEventListener('click', () => {
-    const signInUrl = `${location.origin}/api/settings`;
+    const signInUrl = `${location.origin}/signed-in.html`;
     signInWindow = window.open(signInUrl, 'nftPortfolioSignIn', 'width=520,height=640');
     signInStarted = Date.now();
     let windowLoadedAt = Date.now();
     summary.textContent = t('connecting');
     const tryAgain = () => {
       if (!appAsleep) return;
-      // The window closed by hand before it got through: Connect again.
+      /*
+       * The window closed: by itself once signed in (its page closes
+       * itself), or by hand before it got through. One more look tells
+       * which; still not in, Connect is offered again.
+       */
       if (!signInWindow || signInWindow.closed || Date.now() - signInStarted > 5 * 60 * 1000) {
-        signInStarted = 0;
-        showAppSignIn();
+        loadPortfolio(true).finally(() => {
+          if (!appAsleep) return;
+          signInStarted = 0;
+          showAppSignIn();
+        });
         return;
       }
       /*
