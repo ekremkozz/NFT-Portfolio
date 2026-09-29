@@ -681,6 +681,36 @@ async function openSeaProfile(address) {
  * things you own. The individual pieces ride along so the row can show them
  * without a second request.
  */
+/*
+ * The table needs each collection's totals, not its pieces: those were 90%
+ * of every answer -- 2.9 MB for a wallet of 5,700 pieces, five minutes
+ * apart. So the answer carries counts per wallet and the cost of the
+ * pieces with one, and a collection's pieces are sent when its pop-up
+ * opens, from what the last answer read.
+ */
+const lastPieces = new Map();
+
+function summarisePieces(groups) {
+  lastPieces.clear();
+  return (groups || []).map(({ items, ...group }) => {
+    lastPieces.set(group.key, items);
+    const byWallet = {};
+    const costByWallet = {};
+    let manualCount = 0;
+    for (const item of items) {
+      const owner = item.owner || '';
+      byWallet[owner] = (byWallet[owner] || 0) + 1;
+      if (item.manual) manualCount += 1;
+      if (item.costUsd) {
+        const cost = costByWallet[owner] || (costByWallet[owner] = { usd: 0, n: 0 });
+        cost.usd += item.costUsd;
+        cost.n += 1;
+      }
+    }
+    return { ...group, byWallet, costByWallet, manualCount };
+  });
+}
+
 function groupByCollection(items) {
   const groups = new Map();
 
@@ -689,6 +719,7 @@ function groupByCollection(items) {
     let group = groups.get(key);
     if (!group) {
       group = {
+        key,
         slug: item.slug,
         name: item.collection || item.slug,
         image: item.collectionImage,
@@ -1164,11 +1195,29 @@ function serveStatic(req, res, pathname) {
   if (!file.startsWith(PUBLIC_DIR + path.sep)) return send(res, 404, 'Not found');
   fs.readFile(file, (error, body) => {
     if (error) return send(res, 404, 'Not found');
-    res.writeHead(200, {
+    /*
+     * Asked again only if changed: the page's own files carry a tag of
+     * their contents, and an unchanged one is answered with nothing. Text
+     * goes gzipped -- app.js alone was 147 KB on every load.
+     */
+    const etag = `"${crypto.createHash('sha1').update(body).digest('base64').slice(0, 16)}"`;
+    const headers = {
       'content-type': STATIC_TYPES[path.extname(file)] || 'application/octet-stream',
       'cache-control': 'no-cache',
       'x-content-type-options': 'nosniff',
-    });
+      etag,
+    };
+    if (req.headers['if-none-match'] === etag) {
+      res.writeHead(304, headers);
+      return res.end();
+    }
+    const text = /^(text\/|application\/(javascript|json))/.test(headers['content-type']);
+    if (text && body.length > 2048 && /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''))) {
+      body = zlib.gzipSync(body, { level: 6 });
+      headers['content-encoding'] = 'gzip';
+      headers.vary = 'Accept-Encoding';
+    }
+    res.writeHead(200, headers);
     res.end(body);
   });
 }
@@ -1273,7 +1322,14 @@ const server = http.createServer(async (req, res) => {
         portfolioValues(items.collections, tokens.tokens, !tokens.tokenError),
         (items.collections || []).reduce((sum, g) => sum + (g.valueUsd || 0), 0) + (tokens.tokenTotalUsd || 0),
       ) : null;
-      return send(res, 200, { available: true, wallets, move, ...tokens, ...items });
+      return send(res, 200, { available: true, wallets, move, ...tokens, ...items, collections: summarisePieces(items.collections) });
+    }
+
+    // One collection's pieces, for its pop-up: kept from the last answer.
+    if (route === '/api/portfolio/items' && req.method === 'GET') {
+      const pieces = lastPieces.get(url.searchParams.get('key') || '');
+      if (!pieces) return send(res, 404, { error: 'Not read yet; refresh the page' });
+      return send(res, 200, { items: pieces });
     }
 
     // The main wallet's profile, for the card at the top.

@@ -823,18 +823,24 @@ function filteredPortfolioGroups() {
    * the headline cannot silently read zero if that field is ever missing --
    * and filtered and unfiltered are then measured the same way.
    */
+  const costOf = (group, owners) => owners.reduce((sum, owner) => {
+    const cost = (group.costByWallet || {})[owner];
+    return cost ? { usd: sum.usd + cost.usd, n: sum.n + cost.n } : sum;
+  }, { usd: 0, n: 0 });
   if (!portfolioFilter.size) {
     return portfolioGroups.map((group) => ({
       ...group,
-      valueUsd: (group.items || []).length * (group.offerUsd || 0),
-      floorValueUsd: (group.items || []).length * (group.floorUsd || 0),
+      cost: costOf(group, Object.keys(group.costByWallet || {})),
+      valueUsd: (group.held || 0) * (group.offerUsd || 0),
+      floorValueUsd: (group.held || 0) * (group.floorUsd || 0),
     }));
   }
   const groups = [];
   for (const group of portfolioGroups) {
-    const items = (group.items || []).filter(
-      (item) => item.owner && portfolioFilter.has(item.owner.toLowerCase()));
-    if (!items.length) continue;
+    // The pieces each wallet holds here, counted by the server.
+    const owners = Object.keys(group.byWallet || {}).filter((owner) => owner && portfolioFilter.has(owner.toLowerCase()));
+    const held = owners.reduce((sum, owner) => sum + group.byWallet[owner], 0);
+    if (!held) continue;
     /*
      * held and the two totals are per-item, so they have to be recomputed
      * rather than carried over -- otherwise filtering to one wallet still
@@ -842,11 +848,11 @@ function filteredPortfolioGroups() {
      */
     groups.push({
       ...group,
-      items,
-      held: items.length,
-      wallets: [...new Set(items.map((item) => item.owner))],
-      valueUsd: items.length * (group.offerUsd || 0),
-      floorValueUsd: items.length * (group.floorUsd || 0),
+      held,
+      wallets: owners,
+      cost: costOf(group, owners),
+      valueUsd: held * (group.offerUsd || 0),
+      floorValueUsd: held * (group.floorUsd || 0),
     });
   }
   return groups.sort((a, b) => b.valueUsd - a.valueUsd || b.floorValueUsd - a.floorValueUsd);
@@ -978,6 +984,8 @@ async function loadPortfolio(force) {
    * of them, which is also the default.
    */
   portfolioGroups = data.collections || [];
+  // Pieces read before this answer may have moved on: asked for again.
+  portfolioPieces.clear();
   portfolioWalletList = data.wallets || [];
   // One wallet: the Wallets columns have nothing to say and are hidden.
   document.body.classList.toggle('single-wallet', portfolioWalletList.length <= 1);
@@ -1248,9 +1256,9 @@ function renderPortfolioCards() {
    */
   const shown = filteredPortfolioGroups()
     .filter((group) => searchMatch(tableSearch.collections, group.name, group.slug));
-  const valued = shown.filter((group) => group.offerUsd > 0 || (group.items || []).some((item) => item.manual))
+  const valued = shown.filter((group) => group.offerUsd > 0 || group.manualCount > 0)
     .sort(byChoice);
-  const floorOf = (group) => (group.floorUsd || 0) * (group.items || []).length;
+  const floorOf = (group) => (group.floorUsd || 0) * (group.held || 0);
   const unvalued = shown.filter((group) => !valued.includes(group))
     .sort((a, b) => byChoice(a, b) || floorOf(b) - floorOf(a));
   // Folded unless opened, or unless a search is looking for something.
@@ -1382,7 +1390,7 @@ function itemPageUrl(item, group) {
  * stays as it is underneath instead of being pushed down by them.
  */
 function attachPortfolioItems(row, group) {
-  if (!(group.items || []).length) return;
+  if (!group.held) return;
   row.classList.add('is-expandable');
   row.addEventListener('click', (event) => {
     // The name is a link of its own; it opens OpenSea, not the pieces.
@@ -1391,7 +1399,31 @@ function attachPortfolioItems(row, group) {
   });
 }
 
-function openPortfolioItems(group, row) {
+/*
+ * A collection's pieces are asked for when its pop-up opens -- the table's
+ * answer no longer carries them -- and kept until the next refresh.
+ */
+const portfolioPieces = new Map();
+
+async function openPortfolioItems(group, row) {
+  let pieces = portfolioPieces.get(group.key);
+  if (!pieces) {
+    row.classList.add('is-loading');
+    try {
+      pieces = (await api(`/api/portfolio/items?key=${encodeURIComponent(group.key)}`)).items || [];
+      portfolioPieces.set(group.key, pieces);
+    } catch {
+      pieces = null;
+    } finally {
+      row.classList.remove('is-loading');
+    }
+    if (!pieces) return;
+  }
+  if (portfolioFilter.size) pieces = pieces.filter((item) => item.owner && portfolioFilter.has(item.owner.toLowerCase()));
+  showPortfolioItems(group, row, pieces);
+}
+
+function showPortfolioItems(group, row, pieces) {
   const previous = document.querySelector('.pf-items-modal');
   forgetPictures(previous);
   previous?.remove();
@@ -1414,16 +1446,16 @@ function openPortfolioItems(group, row) {
     const at = portfolioWalletList.findIndex((a) => a.toLowerCase() === String(owner || '').toLowerCase());
     return at < 0 ? portfolioWalletList.length : at;
   };
-  const byWallet = [...group.items].sort((a, b) => walletOrder(a.owner) - walletOrder(b.owner));
+  const byWallet = [...pieces].sort((a, b) => walletOrder(a.owner) - walletOrder(b.owner));
   // Which wallet a piece is in, only when this collection's pieces are in more than one.
-  const spread = new Set(group.items.map((item) => item.owner).filter(Boolean)).size > 1;
+  const spread = new Set(pieces.map((item) => item.owner).filter(Boolean)).size > 1;
   /*
    * Every piece called the same thing and a number ("Blokyz #12"): the name
    * says nothing the collection's row above does not, so only the numbers
    * are shown. A collection whose names differ keeps them whole.
    */
   const NAME_NUMBER = /^(.*?)\s*(#\d+)\s*$/;
-  const stems = new Set(group.items.map((item) => (String(item.name || '').match(NAME_NUMBER) || [, null])[1]));
+  const stems = new Set(pieces.map((item) => (String(item.name || '').match(NAME_NUMBER) || [, null])[1]));
   // One piece has nothing to compare with: its name must be the collection's
   // own, give or take a plural or a word ("Digital Slops" in "Digital Slop").
   const plain = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/s\b/g, '');
@@ -1433,7 +1465,7 @@ function openPortfolioItems(group, row) {
     return Boolean(a && b) && (a === b || b.includes(a) || a.includes(b));
   };
   const numbersOnly = stems.size === 1 && !stems.has(null)
-    && (group.items.length > 1 || sameAsCollection([...stems][0]));
+    && (pieces.length > 1 || sameAsCollection([...stems][0]));
 
   const pieceCell = (item, index) => {
     const cell = document.createElement(itemPageUrl(item, group) ? 'a' : 'div');
@@ -1743,7 +1775,7 @@ function openPortfolioItems(group, row) {
     // As many 210px panels to a line as the row is wide (less the card's
     // padding and border), never more than are held.
     const fit = Math.max(1, Math.floor((line.width - 26 + 6) / 216));
-    const columns = Math.min(group.items.length, fit);
+    const columns = Math.min(pieces.length, fit);
     /*
      * A full line of panels: the card takes the row's width, and the panels
      * grow into it whole -- picture, name and wallet scaled together, not
@@ -2001,12 +2033,12 @@ function portfolioRow(group) {
    * What the pieces with a known price paid cost, and where they stand
    * against today's top offer -- on hover, under the value.
    */
-  const known = (group.items || []).filter((item) => item.costUsd);
-  if (known.length) {
-    const cost = known.reduce((sum, item) => sum + item.costUsd, 0);
-    const pl = known.length * (group.offerUsd || 0) - cost;
+  const known = group.cost || { usd: 0, n: 0 };
+  if (known.n) {
+    const cost = known.usd;
+    const pl = known.n * (group.offerUsd || 0) - cost;
     value.title = `${formatUsd(group.valueUsd || 0)}
-${t('costSummary', { cost: formatUsd(cost), pl: signedUsd(pl), n: known.length, total: group.items.length })}`;
+${t('costSummary', { cost: formatUsd(cost), pl: signedUsd(pl), n: known.n, total: group.held })}`;
     value.dataset.tipTone = pl >= 0 ? 'up' : 'down';
   }
 
