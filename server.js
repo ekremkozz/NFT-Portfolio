@@ -1079,7 +1079,21 @@ function recordPortfolioChange(values, total, { walletKey = '', tokensRead = tru
       net += change;
       moves.push({ name: entry.name, change: Math.round(change * 100) / 100 });
     }
-    if (Math.abs(net) >= 0.01) {
+    /*
+     * Holdings that came in or went out between the two reads: not price
+     * moves, so not in the net, but they explain the total. Without them a
+     * token sent away showed only as a total that fell for no reason.
+     */
+    const now_ = { ...kept, ...values };
+    const listOf = (from, to) => Object.entries(from)
+      // A dollar at least: tokens worth cents drift in and out of OpenSea's list of fifty.
+      .filter(([key, entry]) => !(key in to) && (entry.usd || 0) >= 1)
+      .map(([, entry]) => ({ name: entry.name, usd: Math.round(entry.usd * 100) / 100 }))
+      .sort((a, b) => b.usd - a.usd)
+      .slice(0, 4);
+    const joined = listOf(now_, before.values);
+    const left = listOf(before.values, now_);
+    if (Math.abs(net) >= 0.01 || joined.length || left.length) {
       moves.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
       event = {
         at: now,
@@ -1088,6 +1102,8 @@ function recordPortfolioChange(values, total, { walletKey = '', tokensRead = tru
         total: Math.round(total * 100) / 100,
         moves: moves.slice(0, 6),
       };
+      if (joined.length) event.joined = joined;
+      if (left.length) event.left = left;
       history.events.push(event);
     }
   }

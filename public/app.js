@@ -109,6 +109,8 @@ const STRINGS = {
     histDay: 'Day',
     histChange: 'Change',
     histHoldings: 'Collection',
+    histJoined: 'In',
+    histLeft: 'Out',
     stepHours: '{n}h',
     stepCustom: 'Custom',
     unitMin: 'min',
@@ -216,6 +218,8 @@ const STRINGS = {
     histDay: 'Gün',
     histChange: 'Değişim',
     histHoldings: 'Koleksiyon',
+    histJoined: 'Girdi',
+    histLeft: 'Çıktı',
     stepHours: '{n} sa',
     stepCustom: 'Özel',
     unitMin: 'dk',
@@ -2625,12 +2629,14 @@ function groupHistory(events, stepMs) {
     const key = Math.floor((event.at - origin) / stepMs);
     let step = steps.get(key);
     if (!step) {
-      step = { from: origin + key * stepMs, to: origin + (key + 1) * stepMs, net: 0, total: event.total, at: event.at, sums: new Map() };
+      step = { from: origin + key * stepMs, to: origin + (key + 1) * stepMs, net: 0, total: event.total, at: event.at, sums: new Map(), joined: [], left: [] };
       steps.set(key, step);
     }
     step.net += event.net;
     // Newest first: the first read met is the step's last.
     for (const move of event.moves || []) step.sums.set(move.name, (step.sums.get(move.name) || 0) + move.change);
+    step.joined.push(...(event.joined || []));
+    step.left.push(...(event.left || []));
   }
   return [...steps.values()]
     .map((step) => ({
@@ -2642,7 +2648,7 @@ function groupHistory(events, stepMs) {
         .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
         .slice(0, 6),
     }))
-    .filter((step) => Math.abs(step.net) >= 0.01);
+    .filter((step) => Math.abs(step.net) >= 0.01 || step.joined.length || step.left.length);
 }
 
 async function openPortfolioHistory() {
@@ -2746,8 +2752,10 @@ async function openPortfolioHistory() {
       time.className = 'pf-history-time';
       time.textContent = when(entry, step.ms);
       const net = document.createElement('span');
-      net.className = `move-pill ${entry.net > 0 ? 'is-up' : 'is-down'}`;
-      net.textContent = signed(entry.net);
+      // Only holdings coming or going, no price moving: nothing to sign.
+      const flat = Math.abs(entry.net) < 0.01;
+      net.className = `move-pill ${flat ? '' : entry.net > 0 ? 'is-up' : 'is-down'}`;
+      net.textContent = flat ? '—' : signed(entry.net);
       const moves = document.createElement('span');
       moves.className = 'pf-history-moves';
       for (const move of entry.moves || []) {
@@ -2774,6 +2782,28 @@ async function openPortfolioHistory() {
         amount.textContent = signed(move.change);
         part.append(name, amount);
         moves.appendChild(part);
+      }
+      /*
+       * What came into the portfolio or went out of it between two reads:
+       * not a price move, but where the total's step comes from.
+       */
+      for (const [list, gone] of [[entry.joined || [], false], [entry.left || [], true]]) {
+        for (const holding of list) {
+          const part = document.createElement('span');
+          part.className = `pf-history-move is-flow ${gone ? 'is-left' : 'is-joined'}`;
+          const pic = document.createElement('i');
+          pic.className = 'pf-history-pic';
+          const { image, eth } = pageFor(holding.name);
+          if (eth) pic.innerHTML = ETH_ON_WHITE;
+          else if (image) pic.appendChild(stillImage(image, 18, ''));
+          else pic.appendChild(initialsPicture(holding.name));
+          const name = document.createElement('span');
+          name.textContent = holding.name;
+          const amount = document.createElement('b');
+          amount.textContent = `${gone ? t('histLeft') : t('histJoined')} ${formatUsd(holding.usd)}`;
+          part.append(pic, name, amount);
+          moves.appendChild(part);
+        }
       }
       const total = document.createElement('span');
       total.className = 'pf-history-total';

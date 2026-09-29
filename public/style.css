@@ -231,6 +231,9 @@ select { cursor: pointer; }
 .pf-history-pic canvas, .pf-history-pic img, .pf-history-pic svg { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pf-history-move.is-up b { color: var(--green); }
 .pf-history-move.is-down b { color: var(--red); }
+/* Holdings that came in or went out: dashed, their amount in the muted colour. */
+.pf-history-move.is-flow { border-style: dashed; }
+.pf-history-move.is-flow b { color: var(--muted); font-weight: 500; }
 a.pf-history-move:hover { border-color: var(--accent); }
 a.pf-history-move:hover span { color: var(--accent); }
 .pf-history-total { font-family: var(--mono); color: var(--muted); }
