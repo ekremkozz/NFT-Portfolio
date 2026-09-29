@@ -1399,7 +1399,16 @@ function openPortfolioItems(group, row) {
    */
   const NAME_NUMBER = /^(.*?)\s*(#\d+)\s*$/;
   const stems = new Set(group.items.map((item) => (String(item.name || '').match(NAME_NUMBER) || [, null])[1]));
-  const numbersOnly = group.items.length > 1 && stems.size === 1 && !stems.has(null);
+  // One piece has nothing to compare with: its name must be the collection's
+  // own, give or take a plural or a word ("Digital Slops" in "Digital Slop").
+  const plain = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/s\b/g, '');
+  const sameAsCollection = (stem) => {
+    const a = plain(stem);
+    const b = plain(group.name);
+    return Boolean(a && b) && (a === b || b.includes(a) || a.includes(b));
+  };
+  const numbersOnly = stems.size === 1 && !stems.has(null)
+    && (group.items.length > 1 || sameAsCollection([...stems][0]));
 
   const pieceCell = (item, index) => {
     const cell = document.createElement(itemPageUrl(item, group) ? 'a' : 'div');
