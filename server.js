@@ -35,6 +35,21 @@ function writeFileAtomic(target, body, mode = 0o600) {
   fs.renameSync(temp, target);
 }
 
+/*
+ * A wallet the portfolio can read: an EVM address, or a Solana one (base58,
+ * 32 to 44 characters). A Solana address keeps its case -- base58 tells
+ * letters apart by it -- while an 0x address is lowercased as before.
+ */
+const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+function isWallet(value) {
+  const text = String(value || '').trim();
+  return /^0x[0-9a-fA-F]{40}$/.test(text) || SOLANA_ADDRESS.test(text);
+}
+function walletKeyOf(value) {
+  const text = String(value || '').trim();
+  return /^0x/i.test(text) ? text.toLowerCase() : text;
+}
+
 function isAddress(value) {
   return /^0x[0-9a-fA-F]{40}$/.test(String(value || '').trim());
 }
@@ -96,8 +111,8 @@ function readConfig() {
   try {
     const raw = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
     const wallets = (Array.isArray(raw.wallets) ? raw.wallets : [])
-      .filter((w) => w && isAddress(w.address))
-      .map((w) => ({ address: w.address.toLowerCase(), label: String(w.label || '').slice(0, 24) }));
+      .filter((w) => w && isWallet(w.address))
+      .map((w) => ({ address: walletKeyOf(w.address), label: String(w.label || '').slice(0, 24) }));
     return {
       wallets,
       apiKey: String(raw.apiKey || '').trim(),
@@ -641,7 +656,8 @@ function profileField(html, pattern) {
 }
 
 async function openSeaProfile(address) {
-  const key = address.toLowerCase();
+  // A Solana address keeps its case: OpenSea's page for it is case-sensitive.
+  const key = walletKeyOf(address);
   const cached = profileCache.get(key);
   if (cached && Date.now() < cached.until) return cached.profile;
   let profile = { address: key };
@@ -967,7 +983,7 @@ async function resolveManualNft(link, quantity, owner) {
   if (!parsed) throw new Error('Paste an OpenSea item or collection link');
   const entry = {
     id: crypto.randomBytes(6).toString('hex'),
-    owner: isAddress(owner) ? owner.toLowerCase() : '',
+    owner: isWallet(owner) ? walletKeyOf(owner).toLowerCase() : '',
     addedAt: new Date().toISOString(),
   };
   if (parsed.kind === 'item') {
@@ -1346,8 +1362,8 @@ const server = http.createServer(async (req, res) => {
       if (Array.isArray(body.wallets)) {
         const seen = new Set();
         config.wallets = body.wallets
-          .filter((w) => w && isAddress(w.address))
-          .map((w) => ({ address: String(w.address).trim().toLowerCase(), label: String(w.label || '').trim().slice(0, 24) }))
+          .filter((w) => w && isWallet(w.address))
+          .map((w) => ({ address: walletKeyOf(w.address), label: String(w.label || '').trim().slice(0, 24) }))
           .filter((w) => !seen.has(w.address) && seen.add(w.address))
           .slice(0, 20);
       }

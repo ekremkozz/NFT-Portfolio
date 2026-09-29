@@ -699,7 +699,7 @@ let settingsState = { wallets: [], apiKeySet: false, apiKeyFromEnv: false };
 async function loadSettings() {
   settingsState = await api('/api/settings');
   paintUpdateNote();
-  walletLabelMap = Object.fromEntries(settingsState.wallets.filter((w) => w.label).map((w) => [w.address, w.label]));
+  walletLabelMap = Object.fromEntries(settingsState.wallets.filter((w) => w.label).map((w) => [w.address.toLowerCase(), w.label]));
   return settingsState;
 }
 
@@ -776,7 +776,7 @@ function openSettings(firstRun = false) {
     const wallets = [...list.querySelectorAll('.settings-wallet')]
       .map((row) => ({ address: row.querySelector('.sw-address').value.trim(), label: row.querySelector('.sw-label').value.trim() }))
       .filter((w) => w.address);
-    const bad = wallets.find((w) => !/^0x[0-9a-fA-F]{40}$/.test(w.address));
+    const bad = wallets.find((w) => !/^(0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(w.address));
     if (bad) { error.textContent = t('notAddress', { a: bad.address }); return; }
     if (!wallets.length) { error.textContent = t('needWallet'); return; }
     const body = { wallets };
