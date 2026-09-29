@@ -377,7 +377,25 @@ function flattenItem(item) {
     rarityTier: item.rarity?.category || '',
     // Its owner's own listing, if it is up for sale: the asking price.
     ...listingOf(item),
+    ...costOf(item),
   };
+}
+
+/*
+ * What the holder paid, when that is known: the piece's last sale, if that
+ * sale is what brought it into the wallet (it arrived within two minutes of
+ * it). A mint, a transfer or an airdrop carries no sale, so no cost. The
+ * sale's dollars are those of its day, so the gain is in dollars as OpenSea
+ * counts it: today's top offer against what was paid then.
+ */
+function costOf(item) {
+  const sale = item.lastSale;
+  const when = Date.parse(item.lastSaleAt || '');
+  const arrived = Date.parse(item.lastTransferAt || '');
+  if (!sale || !Number.isFinite(when) || !Number.isFinite(arrived) || Math.abs(when - arrived) > 120000) {
+    return { costUsd: 0, costUnit: null, costSymbol: '' };
+  }
+  return { costUsd: Number(sale.usd) || 0, costUnit: sale.token?.unit ?? null, costSymbol: sale.token?.symbol || '' };
 }
 
 function listingOf(item) {
@@ -445,7 +463,7 @@ function loadCrawl(key) {
     const raw = JSON.parse(fs.readFileSync(ITEMS_CACHE_PATH, 'utf8'));
     if (raw.key !== key || !Array.isArray(raw.items)) return null;
     // Kept before rarity was read: shown, and read again in the background.
-    const stale = raw.items.length && !raw.items.some((item) => 'rarityRank' in item && 'listUsd' in item);
+    const stale = raw.items.length && !raw.items.some((item) => 'rarityRank' in item && 'listUsd' in item && 'costUsd' in item);
     return {
       key, items: new Map(raw.items.map((item) => [item.id, item])), complete: true,
       progress: raw.items.length, running: null, fullAt: stale ? 0 : Number(raw.fullAt) || 0,
@@ -699,6 +717,9 @@ function groupByCollection(items) {
       rarityRank: item.rarityRank || 0,
       rarityTier: item.rarityTier || '',
       listUsd: item.listUsd || 0,
+      costUsd: item.costUsd || 0,
+      costUnit: item.costUnit ?? null,
+      costSymbol: item.costSymbol || '',
     });
     if (item.owner && !group.wallets.includes(item.owner)) group.wallets.push(item.owner);
   }

@@ -258,7 +258,11 @@ a.pf-history-move:hover span { color: var(--accent); }
   padding: 0 7px; border-radius: 999px; line-height: calc(16px * var(--s, 1));
   font-size: calc(10.5px * var(--s, 1)); font-weight: 600; white-space: nowrap;
 }
-.pf-item-tag.is-listed { color: var(--green); background: rgba(52, 199, 123, .1); border: 1px solid rgba(52, 199, 123, .35); }
+.pf-item-tag.is-listed { display: inline-flex; align-items: center; gap: 3px; color: var(--text); background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .18); }
+.pf-item-tag.is-listed svg { width: 10px; height: 10px; flex: none; }
+.pf-item-tag.is-pl { font-family: var(--mono); }
+.pf-item-tag.is-pl.is-up { color: var(--green); background: rgba(52, 199, 123, .1); border: 1px solid rgba(52, 199, 123, .35); }
+.pf-item-tag.is-pl.is-down { color: var(--red); background: rgba(255, 90, 90, .1); border: 1px solid rgba(255, 90, 90, .35); }
 .pf-item-tag.is-rarity { font-family: var(--mono); color: var(--muted); background: rgba(255, 255, 255, .06); border: 1px solid var(--line); }
 .pf-item-tag.is-legendary { color: #ffb547; background: rgba(255, 181, 71, .12); border-color: rgba(255, 181, 71, .4); }
 .pf-item-tag.is-epic { color: #c38bff; background: rgba(195, 139, 255, .12); border-color: rgba(195, 139, 255, .4); }

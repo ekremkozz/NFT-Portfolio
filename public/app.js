@@ -94,6 +94,8 @@ const STRINGS = {
     byWallet: 'By wallet',
     byRarity: 'Rarity',
     listed: 'Listed',
+    boughtFor: 'Bought for {price} ({usd})',
+    costSummary: 'Cost {cost} · P/L {pl} ({n} of {total} pieces)',
     tokensError: 'Tokens could not be read from OpenSea. Refresh to try again.',
     noTokens: 'No tokens in these wallets.',
     backToTop: 'Back to the top',
@@ -199,6 +201,8 @@ const STRINGS = {
     byWallet: 'Cüzdana göre',
     byRarity: 'Rarity',
     listed: 'Satışta',
+    boughtFor: 'Alış {price} ({usd})',
+    costSummary: 'Maliyet {cost} · K/Z {pl} ({total} parçanın {n} tanesi)',
     tokensError: 'Tokenler OpenSea\u2019den okunamadı. Tekrar denemek için yenile.',
     noTokens: 'Bu cüzdanlarda token yok.',
     backToTop: 'Başa dön',
@@ -525,6 +529,21 @@ function compactUsd(value) {
 }
 
 /* A cell's text in short, with the full amount on hover when it was cut. */
+/* Dollars short enough for a pill: $61.58, $616, $2.9K, $1.2M. */
+function pillUsd(usd) {
+  const v = Math.abs(usd);
+  const trim = (text) => text.replace(/\.0$/, '');
+  if (v >= 1e6) return `$${trim((v / 1e6).toFixed(1))}M`;
+  if (v >= 1e3) return `$${trim((v / 1e3).toFixed(v >= 1e4 ? 0 : 1))}K`;
+  if (v >= 100) return `$${Math.round(v)}`;
+  return formatUsd(v);
+}
+
+/* A dollar change with its sign: +$3.21, −$5.10. */
+function signedUsd(usd) {
+  return `${usd >= 0 ? '+' : '−'}${compactUsd(Math.abs(usd))}`;
+}
+
 function setCompactUsd(el, value) {
   const short = compactUsd(value);
   el.textContent = short;
@@ -1467,9 +1486,19 @@ function openPortfolioItems(group, row) {
     if (item.listUsd) {
       const tag = document.createElement('span');
       tag.className = 'pf-item-tag is-listed';
-      // The price alone keeps the pills on one line; the word is on hover.
-      tag.textContent = compactUsd(item.listUsd);
-      tag.title = t('listed');
+      // A price tag and the price, short, to keep the pills on one line.
+      tag.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>';
+      tag.append(pillUsd(item.listUsd));
+      tag.title = `${t('listed')} ${formatUsd(item.listUsd)}`;
+      tags.appendChild(tag);
+    }
+    // Bought on OpenSea: the gain or loss against today's top offer.
+    if (item.costUsd) {
+      const pl = (group.offerUsd || 0) - item.costUsd;
+      const tag = document.createElement('span');
+      tag.className = `pf-item-tag is-pl ${pl >= 0 ? 'is-up' : 'is-down'}`;
+      tag.textContent = `${pl >= 0 ? '+' : '−'}${pillUsd(Math.abs(pl))}`;
+      tag.title = t('boughtFor', { price: `${item.costUnit ?? ''} ${item.costSymbol}`.trim(), usd: formatUsd(item.costUsd) });
       tags.appendChild(tag);
     }
     // OpenSea's rarity rank, in its tier's colour.
@@ -1968,6 +1997,18 @@ function portfolioRow(group) {
   };
   const value = money(group.valueUsd);
   value.classList.add('is-value');
+  /*
+   * What the pieces with a known price paid cost, and where they stand
+   * against today's top offer -- on hover, under the value.
+   */
+  const known = (group.items || []).filter((item) => item.costUsd);
+  if (known.length) {
+    const cost = known.reduce((sum, item) => sum + item.costUsd, 0);
+    const pl = known.length * (group.offerUsd || 0) - cost;
+    value.title = `${formatUsd(group.valueUsd || 0)}
+${t('costSummary', { cost: formatUsd(cost), pl: signedUsd(pl), n: known.length, total: group.items.length })}`;
+    value.dataset.tipTone = pl >= 0 ? 'up' : 'down';
+  }
 
   /*
    * Floor and top offer in one cell: the floor, and under it the offer --
