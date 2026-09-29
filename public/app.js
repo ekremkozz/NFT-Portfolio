@@ -96,6 +96,8 @@ const STRINGS = {
     tokensError: 'Tokens could not be read from OpenSea. Refresh to try again.',
     noTokens: 'No tokens in these wallets.',
     backToTop: 'Back to the top',
+    editName: 'Edit the name',
+    editNameHint: 'Leave empty for your OpenSea name',
     historyTitle: 'Price changes · last {range}',
     rangeHours: '{n} hours',
     rangeDays: '{n} days',
@@ -198,6 +200,8 @@ const STRINGS = {
     tokensError: 'Tokenler OpenSea\u2019den okunamadı. Tekrar denemek için yenile.',
     noTokens: 'Bu cüzdanlarda token yok.',
     backToTop: 'Başa dön',
+    editName: 'Adı düzenle',
+    editNameHint: 'OpenSea adın için boş bırak',
     historyTitle: 'Fiyat değişimleri · son {range}',
     rangeHours: '{n} saat',
     rangeDays: '{n} gün',
@@ -3321,9 +3325,11 @@ function paintProfile() {
   const short = `${address.slice(0, 6)}…${address.slice(-4)}`;
   const label = walletLabelMap[address.toLowerCase()];
   const name = $('#portfolio-profile-name');
-  name.textContent = profile.name || profile.ens || label || short;
+  // A name set here wins over OpenSea's.
+  name.textContent = settingsState.profileName || profile.name || profile.ens || label || short;
   // OpenSea's blue tick, for the accounts it has verified.
   if (profile.verified) name.append(' ', verifiedBadge());
+  $('#portfolio-profile-edit').setAttribute('aria-label', t('editName'));
   // The name opens this wallet's portfolio on OpenSea.
   name.href = `https://opensea.io/${address}/portfolio`;
   const parts = [short];
@@ -3337,6 +3343,48 @@ function paintProfile() {
   if (profile.image) pic.appendChild(stillImage(profile.image, 48, ''));
   else pic.textContent = address.slice(2, 4).toUpperCase();
 }
+
+/*
+ * The profile's name, edited in place: the pencil beside it turns it into a
+ * field; Enter keeps it, Escape leaves it, and an empty one goes back to
+ * OpenSea's name. Kept in the app's settings, so a new codespace has it too.
+ */
+$('#portfolio-profile-edit').addEventListener('click', () => {
+  const name = $('#portfolio-profile-name');
+  if (document.querySelector('.pf-profile-input')) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'pf-profile-input';
+  input.maxLength = 40;
+  input.value = settingsState.profileName || name.textContent.trim();
+  input.placeholder = t('editNameHint');
+  name.hidden = true;
+  $('#portfolio-profile-edit').hidden = true;
+  name.after(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const finish = async (keep) => {
+    if (done) return;
+    done = true;
+    const value = input.value.trim();
+    input.remove();
+    name.hidden = false;
+    $('#portfolio-profile-edit').hidden = false;
+    if (keep && value !== (settingsState.profileName || '')) {
+      try {
+        await api('/api/settings', { method: 'POST', body: JSON.stringify({ profileName: value }) });
+        settingsState.profileName = value;
+      } catch { /* left as it was */ }
+    }
+    paintProfile();
+  };
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') finish(true);
+    if (event.key === 'Escape') finish(false);
+  });
+  input.addEventListener('blur', () => finish(true));
+});
 
 /* ---------------------------------------------------------------- boot */
 

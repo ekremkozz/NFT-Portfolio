@@ -98,9 +98,14 @@ function readConfig() {
     const wallets = (Array.isArray(raw.wallets) ? raw.wallets : [])
       .filter((w) => w && isAddress(w.address))
       .map((w) => ({ address: w.address.toLowerCase(), label: String(w.label || '').slice(0, 24) }));
-    return { wallets, apiKey: String(raw.apiKey || '').trim() };
+    return {
+      wallets,
+      apiKey: String(raw.apiKey || '').trim(),
+      // The name shown on the profile card in place of OpenSea's, if one was set.
+      profileName: String(raw.profileName || '').trim().slice(0, 40),
+    };
   } catch {
-    return { wallets: [], apiKey: '' };
+    return { wallets: [], apiKey: '', profileName: '' };
   }
 }
 
@@ -1143,6 +1148,7 @@ const server = http.createServer(async (req, res) => {
       const config = readConfig();
       return send(res, 200, {
         wallets: config.wallets,
+        profileName: config.profileName,
         apiKeySet: Boolean(readOpenSeaKey()),
         apiKeyFromEnv: Boolean(String(process.env.OPENSEA_API_KEY || '').trim()),
         updateBehind,
@@ -1214,6 +1220,7 @@ const server = http.createServer(async (req, res) => {
           .slice(0, 20);
       }
       if (typeof body.apiKey === 'string') config.apiKey = body.apiKey.trim();
+      if (typeof body.profileName === 'string') config.profileName = body.profileName.trim().slice(0, 40);
       writeConfig(config);
       return send(res, 200, { ok: true, wallets: config.wallets, apiKeySet: Boolean(readOpenSeaKey()) });
     }
