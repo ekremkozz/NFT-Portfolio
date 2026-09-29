@@ -1594,6 +1594,10 @@ function showPortfolioItems(group, row, pieces) {
   grid.addEventListener('scroll', () => {
     if (piecesDrawn < piecesShown.length && grid.scrollTop + grid.clientHeight > grid.scrollHeight - 400) drawMorePieces();
   }, { passive: true });
+  // A list too short to scroll would never ask for the rest: drawn until it can.
+  const fillPieces = () => {
+    while (grid.isConnected && piecesDrawn < piecesShown.length && grid.scrollHeight <= grid.clientHeight + 400) drawMorePieces();
+  };
 
   const drawPieces = () => {
     const query = view.query.trim().toLowerCase().replace(/^#/, '');
@@ -1616,6 +1620,7 @@ function showPortfolioItems(group, row, pieces) {
     piecesShown = shown;
     piecesDrawn = 0;
     drawMorePieces();
+    fillPieces();
     if (!shown.length) {
       const none = document.createElement('div');
       none.className = 'pf-items-none';
@@ -1824,6 +1829,7 @@ function showPortfolioItems(group, row, pieces) {
     unit.style.borderRadius = `${radius} ${radius} ${full ? '0' : radius} 0`;
   };
   place();
+  fillPieces();
   window.addEventListener('resize', place);
 
   const close = () => {

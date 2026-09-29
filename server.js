@@ -1057,6 +1057,17 @@ function recordPortfolioChange(values, total, { walletKey = '', tokensRead = tru
    * pieces that wallet holds.
    */
   const before = history.snapshot && (history.snapshot.walletKey || '') === walletKey ? history.snapshot : null;
+  /*
+   * The next comparison is with this read as it is: a collection no longer
+   * held is not kept, or buying it again months later read as a jump from
+   * its old value. Only tokens that could not be read this time keep theirs
+   * -- and count in the total, which without them read as a fall.
+   */
+  const kept = {};
+  if (before && !tokensRead) {
+    for (const [key, entry] of Object.entries(before.values)) if (key.startsWith('t|')) kept[key] = entry;
+  }
+  total += Object.values(kept).reduce((sum, entry) => sum + (entry.usd || 0), 0);
   if (before) {
     let net = 0;
     const moves = [];
@@ -1079,15 +1090,6 @@ function recordPortfolioChange(values, total, { walletKey = '', tokensRead = tru
       };
       history.events.push(event);
     }
-  }
-  /*
-   * The next comparison is with this read as it is: a collection no longer
-   * held is not kept, or buying it again months later read as a jump from
-   * its old value. Only tokens that could not be read this time keep theirs.
-   */
-  const kept = {};
-  if (before && !tokensRead) {
-    for (const [key, entry] of Object.entries(before.values)) if (key.startsWith('t|')) kept[key] = entry;
   }
   const snapshot = { at: now, walletKey, values: { ...kept, ...values } };
   const events = history.events.filter((e) => now - e.at < HISTORY_KEEP_MS);
@@ -1248,6 +1250,16 @@ const server = http.createServer(async (req, res) => {
   const route = url.pathname;
   lastActivity = Date.now();
   try {
+    /*
+     * Changes only as JSON. Any web page open in the same browser can post a
+     * plain form or text to localhost; one that says it is JSON needs the
+     * browser's permission first, which this app never gives. The page's own
+     * requests are all JSON.
+     */
+    if (req.method !== 'GET' && req.method !== 'HEAD'
+      && !/^application\/json\b/i.test(String(req.headers['content-type'] || ''))) {
+      return send(res, 415, { error: 'JSON only' });
+    }
     if (route === '/api/settings' && req.method === 'GET') {
       const config = readConfig();
       return send(res, 200, {

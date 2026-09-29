@@ -21,6 +21,8 @@ const { execFileSync, spawn } = require('child_process');
 
 const here = __dirname;
 const UPDATE_EXIT = 75;
+// When the app last crashed: a few restarts, not a loop.
+let crashes = [];
 
 function update() {
   if (!fs.existsSync(path.join(here, '.git'))) return;
@@ -63,10 +65,28 @@ function run() {
       run();
       return;
     }
+    /*
+     * A crash is not the end: the app comes back in a few seconds, as it
+     * would after an update. Stopped by hand (Ctrl+C) or on purpose (exit
+     * 0), it stays stopped; crashing again and again, it gives up.
+     */
+    if (!signal && code && !stopping) {
+      const now = Date.now();
+      crashes = crashes.filter((at) => now - at < 10 * 60 * 1000).concat(now);
+      if (crashes.length <= 5) {
+        console.log(`\n  The app stopped unexpectedly (code ${code}); starting it again…`);
+        setTimeout(run, 3000);
+        return;
+      }
+      console.log('\n  The app keeps stopping; not starting it again. Run npm start to try again.');
+    }
     process.exit(signal ? 1 : code || 0);
   });
 }
 
-// Ctrl+C reaches both processes; this one just waits for the app to close.
-process.on('SIGINT', () => {});
+// Ctrl+C reaches both processes; this one just waits for the app to close,
+// and knows not to start it again (on Windows the app ends with an error
+// code then, not a signal).
+let stopping = false;
+process.on('SIGINT', () => { stopping = true; });
 run();
