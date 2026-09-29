@@ -1503,6 +1503,25 @@ function openPortfolioItems(group, row) {
     return x.length - y.length || (x < y ? -1 : x > y ? 1 : 0);
   };
 
+  /*
+   * Drawn sixty at a time, the next sixty as the list is scrolled near its
+   * end. All at once, a collection of a thousand pieces put a thousand
+   * panels on the page -- three times OpenSea's own element count -- and
+   * clearing a search drew every remembered picture again at once, some
+   * eighty megabytes of them.
+   */
+  const PIECES_STEP = 60;
+  let piecesShown = [];
+  let piecesDrawn = 0;
+  const drawMorePieces = () => {
+    const next = piecesShown.slice(piecesDrawn, piecesDrawn + PIECES_STEP);
+    next.forEach((item, i) => grid.appendChild(pieceCell(item, piecesDrawn + i)));
+    piecesDrawn += next.length;
+  };
+  grid.addEventListener('scroll', () => {
+    if (piecesDrawn < piecesShown.length && grid.scrollTop + grid.clientHeight > grid.scrollHeight - 400) drawMorePieces();
+  }, { passive: true });
+
   const drawPieces = () => {
     const query = view.query.trim().toLowerCase().replace(/^#/, '');
     let shown = byWallet.filter((item) => {
@@ -1520,7 +1539,10 @@ function openPortfolioItems(group, row) {
     }
     forgetPictures(grid);
     grid.textContent = '';
-    shown.forEach((item, index) => grid.appendChild(pieceCell(item, index)));
+    grid.scrollTop = 0;
+    piecesShown = shown;
+    piecesDrawn = 0;
+    drawMorePieces();
     if (!shown.length) {
       const none = document.createElement('div');
       none.className = 'pf-items-none';
