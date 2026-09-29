@@ -375,6 +375,18 @@ function flattenItem(item) {
     // OpenSea's rarity: its rank in the collection and the tier it falls in.
     rarityRank: Number(item.rarity?.rank) || 0,
     rarityTier: item.rarity?.category || '',
+    // Its owner's own listing, if it is up for sale: the asking price.
+    ...listingOf(item),
+  };
+}
+
+function listingOf(item) {
+  const order = item.lowestListingForOwner || item.bestListing;
+  const price = order?.pricePerItem || {};
+  return {
+    listUsd: Number(price.usd) || 0,
+    listUnit: price.token?.unit ?? null,
+    listSymbol: price.token?.symbol || '',
   };
 }
 
@@ -433,7 +445,7 @@ function loadCrawl(key) {
     const raw = JSON.parse(fs.readFileSync(ITEMS_CACHE_PATH, 'utf8'));
     if (raw.key !== key || !Array.isArray(raw.items)) return null;
     // Kept before rarity was read: shown, and read again in the background.
-    const stale = raw.items.length && !raw.items.some((item) => 'rarityRank' in item);
+    const stale = raw.items.length && !raw.items.some((item) => 'rarityRank' in item && 'listUsd' in item);
     return {
       key, items: new Map(raw.items.map((item) => [item.id, item])), complete: true,
       progress: raw.items.length, running: null, fullAt: stale ? 0 : Number(raw.fullAt) || 0,
@@ -686,6 +698,7 @@ function groupByCollection(items) {
       manual: item.manual || null,
       rarityRank: item.rarityRank || 0,
       rarityTier: item.rarityTier || '',
+      listUsd: item.listUsd || 0,
     });
     if (item.owner && !group.wallets.includes(item.owner)) group.wallets.push(item.owner);
   }

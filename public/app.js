@@ -93,6 +93,7 @@ const STRINGS = {
     all: 'All',
     byWallet: 'By wallet',
     byRarity: 'Rarity',
+    listed: 'Listed',
     tokensError: 'Tokens could not be read from OpenSea. Refresh to try again.',
     noTokens: 'No tokens in these wallets.',
     backToTop: 'Back to the top',
@@ -197,6 +198,7 @@ const STRINGS = {
     all: 'Tümü',
     byWallet: 'Cüzdana göre',
     byRarity: 'Rarity',
+    listed: 'Satışta',
     tokensError: 'Tokenler OpenSea\u2019den okunamadı. Tekrar denemek için yenile.',
     noTokens: 'Bu cüzdanlarda token yok.',
     backToTop: 'Başa dön',
@@ -1461,6 +1463,15 @@ function openPortfolioItems(group, row) {
     const tags = document.createElement('span');
     tags.className = 'pf-item-tags';
     if (item.owner && spread) tags.appendChild(walletPill(item.owner));
+    // Up for sale: its asking price, where the owner listed it.
+    if (item.listUsd) {
+      const tag = document.createElement('span');
+      tag.className = 'pf-item-tag is-listed';
+      // The price alone keeps the pills on one line; the word is on hover.
+      tag.textContent = compactUsd(item.listUsd);
+      tag.title = t('listed');
+      tags.appendChild(tag);
+    }
     // OpenSea's rarity rank, in its tier's colour.
     if (item.rarityRank) {
       const tag = document.createElement('span');

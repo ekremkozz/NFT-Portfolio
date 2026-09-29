@@ -253,11 +253,12 @@ a.pf-history-move:hover span { color: var(--accent); }
 .pf-item-text { padding-right: calc(24px * var(--s, 1)); }
 .pf-item-text .pf-item-label { display: flex; gap: .3em; }
 .pf-item-base { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.pf-item-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.pf-item-tags { display: flex; flex-wrap: nowrap; gap: 4px; overflow: hidden; }
 .pf-item-tag {
   padding: 0 7px; border-radius: 999px; line-height: calc(16px * var(--s, 1));
   font-size: calc(10.5px * var(--s, 1)); font-weight: 600; white-space: nowrap;
 }
+.pf-item-tag.is-listed { color: var(--green); background: rgba(52, 199, 123, .1); border: 1px solid rgba(52, 199, 123, .35); }
 .pf-item-tag.is-rarity { font-family: var(--mono); color: var(--muted); background: rgba(255, 255, 255, .06); border: 1px solid var(--line); }
 .pf-item-tag.is-legendary { color: #ffb547; background: rgba(255, 181, 71, .12); border-color: rgba(255, 181, 71, .4); }
 .pf-item-tag.is-epic { color: #c38bff; background: rgba(195, 139, 255, .12); border-color: rgba(195, 139, 255, .4); }
