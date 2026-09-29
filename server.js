@@ -752,9 +752,29 @@ function parseOpenSeaLink(link) {
 async function usdPerSymbol(symbol) {
   const plain = String(symbol || '').toUpperCase().replace(/^W(?=ETH$|BNB$|AVAX$|HYPE$|POL$)/, '');
   const chainId = Object.keys(NATIVE_TOKEN).find((id) => NATIVE_TOKEN[id].symbol === plain);
-  if (!chainId) return 0;
-  const price = await nativeTokenPrice(Number(chainId));
-  return price.available ? price.usd : 0;
+  if (chainId) {
+    const price = await nativeTokenPrice(Number(chainId));
+    if (price.available) return price.usd;
+  }
+  return usdPerSymbolFromItems(plain);
+}
+
+/*
+ * The same rate from OpenSea's own figures, when CoinGecko will not answer:
+ * it refuses cloud servers' addresses outright (403, then 429), and a zero
+ * rate priced every hand-added piece at nothing. Each piece read carries its
+ * floor both in the coin and in dollars; the middle of their ratios is the
+ * coin's price as OpenSea reckons it.
+ */
+function usdPerSymbolFromItems(plain) {
+  const ratios = [];
+  for (const item of crawl ? crawl.items.values() : []) {
+    const symbol = String(item.floorSymbol || '').toUpperCase().replace(/^W(?=ETH$|BNB$|AVAX$|HYPE$|POL$)/, '');
+    if (symbol === plain && item.floorUnit > 0 && item.floorUsd > 0) ratios.push(item.floorUsd / item.floorUnit);
+  }
+  if (!ratios.length) return 0;
+  ratios.sort((a, b) => a - b);
+  return ratios[Math.floor(ratios.length / 2)];
 }
 
 /*
@@ -810,6 +830,8 @@ async function manualCollection(slug) {
       offerUnit: offerUnit || null,
       offerSymbol,
     };
+    // A price that could not be turned into dollars is not kept as nothing.
+    if ((floorUnit && !floorRate) || (offerUnit && !offerRate)) throw new Error('No dollar rate right now');
     manualCollectionCache.set(slug, { at: Date.now(), data: info });
     return info;
   } catch (error) {
