@@ -399,7 +399,11 @@ function costOf(item) {
 }
 
 function listingOf(item) {
-  const order = item.lowestListingForOwner || item.bestListing;
+  // The owner's own listing only: of a piece several people hold (ERC-1155),
+  // the best listing can be someone else's.
+  const owner = (item.owner?.address || '').toLowerCase();
+  const best = (item.bestListing?.maker?.address || '').toLowerCase() === owner ? item.bestListing : null;
+  const order = item.lowestListingForOwner || best;
   const price = order?.pricePerItem || {};
   return {
     listUsd: Number(price.usd) || 0,
@@ -586,7 +590,11 @@ async function openSeaPortfolioItems(addresses, extraItems = []) {
     }
   } else if (crawl.complete && !crawl.running) {
     if (Date.now() - crawl.fullAt > fullReadEvery(crawl)) startFullRead(crawl, addresses);
-    else if (Date.now() - crawl.quickAt > QUICK_EVERY_MS) await quickRead(crawl, addresses).catch(() => {});
+    else if (Date.now() - crawl.quickAt > QUICK_EVERY_MS) {
+      // One at a time: two pages open asked twice, and OpenSea was read twice.
+      if (!crawl.quick) crawl.quick = quickRead(crawl, addresses).catch(() => {}).finally(() => { crawl.quick = null; });
+      await crawl.quick;
+    }
   } else if (!crawl.complete && !crawl.running) {
     // A first read that failed part way is tried again.
     startFullRead(crawl, addresses);
@@ -1039,11 +1047,16 @@ function portfolioValues(collections, tokens, tokensRead) {
  * Compares this read with the last, records the change if there is one, and
  * returns it -- or null when nothing moved or there is nothing yet to compare.
  */
-function recordPortfolioChange(values, total) {
+function recordPortfolioChange(values, total, { walletKey = '', tokensRead = true } = {}) {
   const now = Date.now();
   const history = readPortfolioHistory();
   let event = null;
-  const before = history.snapshot;
+  /*
+   * Compared only with a read of the same wallets: with one added or taken
+   * out, a collection held in both read as having risen or fallen by the
+   * pieces that wallet holds.
+   */
+  const before = history.snapshot && (history.snapshot.walletKey || '') === walletKey ? history.snapshot : null;
   if (before) {
     let net = 0;
     const moves = [];
@@ -1067,8 +1080,16 @@ function recordPortfolioChange(values, total) {
       history.events.push(event);
     }
   }
-  // Holdings not in this read keep their last value for the next comparison.
-  const snapshot = { at: now, values: { ...(before && before.values), ...values } };
+  /*
+   * The next comparison is with this read as it is: a collection no longer
+   * held is not kept, or buying it again months later read as a jump from
+   * its old value. Only tokens that could not be read this time keep theirs.
+   */
+  const kept = {};
+  if (before && !tokensRead) {
+    for (const [key, entry] of Object.entries(before.values)) if (key.startsWith('t|')) kept[key] = entry;
+  }
+  const snapshot = { at: now, walletKey, values: { ...kept, ...values } };
   const events = history.events.filter((e) => now - e.at < HISTORY_KEEP_MS);
   try {
     writeFileAtomic(PORTFOLIO_HISTORY_PATH, JSON.stringify({ snapshot, events }));
@@ -1321,6 +1342,7 @@ const server = http.createServer(async (req, res) => {
       const move = items.complete ? recordPortfolioChange(
         portfolioValues(items.collections, tokens.tokens, !tokens.tokenError),
         (items.collections || []).reduce((sum, g) => sum + (g.valueUsd || 0), 0) + (tokens.tokenTotalUsd || 0),
+        { walletKey: wallets.join(','), tokensRead: !tokens.tokenError },
       ) : null;
       return send(res, 200, { available: true, wallets, move, ...tokens, ...items, collections: summarisePieces(items.collections) });
     }

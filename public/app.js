@@ -1423,10 +1423,11 @@ async function openPortfolioItems(group, row) {
   showPortfolioItems(group, row, pieces);
 }
 
+let closeOpenPieces = null;
+
 function showPortfolioItems(group, row, pieces) {
-  const previous = document.querySelector('.pf-items-modal');
-  forgetPictures(previous);
-  previous?.remove();
+  // The one open, closed properly: its key and resize listeners go with it.
+  if (closeOpenPieces) closeOpenPieces();
   // A row half out of the table's view is brought in, so its lit copy shows.
   row.scrollIntoView({ block: 'nearest' });
   const modal = document.createElement('div');
@@ -1830,7 +1831,9 @@ function showPortfolioItems(group, row, pieces) {
     modal.remove();
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', place);
+    if (closeOpenPieces === close) closeOpenPieces = null;
   };
+  closeOpenPieces = close;
   const onKey = (event) => { if (event.key === 'Escape') close(); };
   modal.addEventListener('mousedown', (event) => { if (event.target === modal) close(); });
   document.addEventListener('keydown', onKey);
@@ -1980,7 +1983,8 @@ function portfolioRow(group) {
    * filtered to this collection, which is where they can be listed or
    * compared. Held once: the collection's own page, as before.
    */
-  const profile = portfolioWalletList[0] || '';
+  // The profile of the wallet holding them, when one does; else the main one.
+  const profile = ((group.wallets || []).length === 1 ? group.wallets[0] : portfolioWalletList[0]) || '';
   if (group.slug && group.held > 1 && profile) {
     link.href = `https://opensea.io/${profile}?collectionSlugs=${encodeURIComponent(group.slug)}`;
   } else if (group.slug) {
