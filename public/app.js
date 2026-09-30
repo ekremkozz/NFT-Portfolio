@@ -3592,11 +3592,16 @@ async function openWhatsNew() {
     });
     actions.appendChild(now);
   }
-  card.appendChild(title);
-  if (changes.length) card.appendChild(list);
-  if (how.textContent) card.appendChild(how);
-  if (historyBox) card.appendChild(historyBox);
-  card.appendChild(actions);
+  /*
+   * The notes and the history scroll between the title and the buttons: a
+   * long list pushed Close and Update now off the bottom of the window.
+   */
+  const body = document.createElement('div');
+  body.className = 'whatsnew-body';
+  if (changes.length) body.appendChild(list);
+  if (how.textContent) body.appendChild(how);
+  if (historyBox) body.appendChild(historyBox);
+  card.append(title, body, actions);
   modal.appendChild(card);
   document.body.appendChild(modal);
 
