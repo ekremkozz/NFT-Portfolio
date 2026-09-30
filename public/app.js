@@ -1908,8 +1908,10 @@ function showPortfolioItems(group, row, pieces) {
     const margin = 12;
     // The pieces scroll inside rather than push the panel past the table.
     card.style.maxHeight = `${Math.max(120, Math.min(area.height, viewHeight() - margin * 2) - unitHeight + edge)}px`;
-    // As wide as the table's own panel, edge to edge, not just its rows.
-    card.style.width = full ? `${area.width}px` : '';
+    // As wide as the table's own panel, edge to edge, not just its rows --
+    // and so too with More open, whose details would be squeezed otherwise.
+    const wide = full || !info.hidden;
+    card.style.width = wide ? `${area.width}px` : '';
     const total = unitHeight - edge + card.offsetHeight;
     const unitTop = Math.max(margin, Math.min(area.top + (area.height - total) / 2, viewHeight() - margin - total));
 
@@ -1926,7 +1928,7 @@ function showPortfolioItems(group, row, pieces) {
     card.style.left = `${area.left}px`;
     card.style.top = `${unitTop + unitHeight - edge}px`;
     card.style.borderRadius = `0 0 ${radius} ${radius}`;
-    unit.style.borderRadius = `${radius} ${radius} ${full ? '0' : radius} 0`;
+    unit.style.borderRadius = `${radius} ${radius} ${wide ? '0' : radius} 0`;
   };
   place();
   fillPieces();
