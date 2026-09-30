@@ -1782,6 +1782,19 @@ function showPortfolioItems(group, row, pieces) {
    */
   const lit = row.cloneNode(true);
   lit.classList.add('pf-row-lit');
+  // Its 1D as known now, and again once it arrives.
+  const litChange = lit.querySelector('.pf-change');
+  if (litChange) {
+    paintFloorChange(litChange);
+    if (!litChange.textContent && group.slug) {
+      api(`/api/floor-changes?slugs=${encodeURIComponent(group.slug)}`).then(({ changes }) => {
+        floorChanges.set(group.slug, { at: Date.now(), v: changes?.[group.slug] ?? null });
+        paintFloorChange(litChange);
+        const cell = row.querySelector('.pf-change');
+        if (cell) paintFloorChange(cell);
+      }).catch(() => {});
+    }
+  }
   // A cloned canvas comes back blank; its picture is drawn in again.
   const drawn = row.querySelectorAll('canvas');
   lit.querySelectorAll('canvas').forEach((copy, i) => {

@@ -1117,25 +1117,25 @@ section.tab[data-tab="portfolio"] .pf-controls .pf-updated-line { align-self: st
 }
 .pf-collection-info[hidden] { display: none; }
 .pf-ci-pill {
-  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; box-sizing: border-box;
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; box-sizing: border-box;
   border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2);
-  font-family: var(--mono); font-size: 11px; text-transform: uppercase; white-space: nowrap;
+  font-family: var(--mono); font-size: 12px; text-transform: uppercase; white-space: nowrap;
   color: var(--muted); text-decoration: none;
 }
 a.pf-ci-pill:hover { color: var(--text); }
-.pf-ci-pill svg { width: 12px; height: 12px; }
+.pf-ci-pill svg { width: 13px; height: 13px; }
 .pf-ci-pill.is-live { color: var(--green); border-color: var(--green); }
 /* The links in one frame, as tall as the pills beside them. */
 .pf-ci-links {
-  margin-left: auto; display: flex; align-items: center; gap: 1px; height: 22px; padding: 0 2px; box-sizing: border-box;
+  margin-left: auto; display: flex; align-items: center; gap: 2px; height: 26px; padding: 0 2px; box-sizing: border-box;
   border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2);
 }
 .pf-ci-link {
-  width: 24px; height: 18px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 22px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
   border: 0; border-radius: 4px; background: none; color: var(--muted); cursor: pointer; text-decoration: none;
 }
 .pf-ci-link:hover { color: var(--text); background: var(--panel-3); }
-.pf-ci-link svg { width: 13px; height: 13px; }
+.pf-ci-link svg { width: 15px; height: 15px; }
 .pf-ci-link.is-done { color: var(--green); }
 
 /* Floor over offer in the heading, as in the cells under it: the column is
