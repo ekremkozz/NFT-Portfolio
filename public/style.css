@@ -1152,6 +1152,5 @@ body.single-wallet .pf-head, body.single-wallet .pf-row { grid-template-columns:
 .pf-change { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .pf-change.is-up { color: var(--green); }
 .pf-change.is-down { color: var(--red); }
-/* The offer a step right of the floor above it, in the heading and the cells:
-   two figures read as a pair, not one column of numbers. */
-.pf-market-head .pf-sort[data-sort="offer"], .pf-row .pf-offer { margin-right: -8px; }
+/* In the heading, OFFER a step right of FLOOR above it. */
+.pf-market-head .pf-sort[data-sort="offer"] { margin-right: -8px; }
