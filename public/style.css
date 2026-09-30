@@ -1069,8 +1069,15 @@ input.pf-profile-input {
 /* The profile's list picks wallets, as the menu over the tables does. */
 .pf-profile-wallet { cursor: pointer; }
 .pf-profile-wallet.is-on .pf-profile-wallet-addr { color: var(--text); }
-.pf-profile-wallet.is-on { background: var(--panel-3); box-shadow: inset 2px 0 0 var(--accent); }
-button.pf-profile-menu-head { display: block; width: 100%; text-align: left; border: 0; background: none; border-radius: 8px; cursor: pointer; font: inherit; font-size: 11px; }
-button.pf-profile-menu-head:hover { color: var(--text); background: var(--panel-3); }
-button.pf-profile-menu-head.is-on { color: var(--text); font-weight: 700; }
+.pf-profile-wallet { border: 1px solid transparent; }
+.pf-profile-wallet.is-on { background: var(--panel-3); border-color: var(--wallet, var(--accent)); }
+.pf-profile-menu-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 24px; }
+.pf-profile-clear {
+  border: 0; background: none; padding: 2px 6px; border-radius: 6px; font: inherit; font-size: 11px;
+  color: var(--accent); cursor: pointer;
+}
+.pf-profile-clear:hover { background: var(--panel-3); }
+.pf-profile-clear[hidden] { display: none; }
 .pf-profile-wallets.is-on { color: var(--accent); }
+/* Without the wallet menu, the counter takes the controls card's both lines. */
+section.tab[data-tab="portfolio"] .pf-controls .pf-updated-line { grid-row: 1 / span 2; }

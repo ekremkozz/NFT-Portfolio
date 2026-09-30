@@ -101,6 +101,7 @@ const STRINGS = {
     backToTop: 'Back to the top',
     editName: 'Edit the name',
     copyAddress: 'Copy the address',
+    deselect: 'Deselect',
     editNameHint: 'Leave empty for your OpenSea name',
     historyTitle: 'Price changes · last {range}',
     rangeHours: '{n} hours',
@@ -211,6 +212,7 @@ const STRINGS = {
     backToTop: 'Başa dön',
     editName: 'Adı düzenle',
     copyAddress: 'Adresi kopyala',
+    deselect: 'Seçimi kaldır',
     editNameHint: 'OpenSea adın için boş bırak',
     historyTitle: 'Fiyat değişimleri · son {range}',
     rangeHours: '{n} saat',
@@ -940,7 +942,6 @@ async function loadPortfolio(force) {
   if (portfolioUpdating) return;
   // Rebuilding the table destroys the rows these cards are anchored to.
   const summary = $('#portfolio-summary');
-  const walletBox = $('#portfolio-wallets');
 
   // Loading shows in the counter pill; this line is for errors only. The
   // asleep note stays while asking again: cleared each time, it blinked.
@@ -1002,54 +1003,7 @@ async function loadPortfolio(force) {
     if (!present.has(address)) portfolioFilter.delete(address);
   }
 
-  /*
-   * One button that opens the wallet list, rather than a chip per wallet in
-   * the header: the row of chips took a line of its own. The list ticks
-   * wallets in and out; All wallets clears the selection.
-   */
-  walletBox.textContent = '';
-  const trigger = document.createElement('button');
-  trigger.type = 'button';
-  trigger.id = 'portfolio-wallet-trigger';
-  trigger.className = 'pf-wallet-trigger';
-  trigger.setAttribute('aria-haspopup', 'true');
-  const menu = document.createElement('div');
-  menu.id = 'portfolio-wallet-menu';
-  menu.className = 'pf-wallet-menu hidden';
-
-  const clear = document.createElement('button');
-  clear.type = 'button';
-  clear.id = 'portfolio-filter-clear';
-  clear.className = 'portfolio-wallet pf-wallet-option is-clear';
-  clear.textContent = t('allWallets');
-  clear.addEventListener('click', () => {
-    portfolioFilter.clear();
-    renderPortfolioView();
-  });
-  menu.appendChild(clear);
-
-  for (const address of data.wallets) {
-    const key = address.toLowerCase();
-    const option = document.createElement('button');
-    option.type = 'button';
-    option.dataset.addr = key;
-    option.className = 'portfolio-wallet pf-wallet-option' + (portfolioFilter.has(key) ? ' is-on' : '');
-    option.textContent = walletDisplay(address);
-    option.addEventListener('click', () => {
-      if (portfolioFilter.has(key)) portfolioFilter.delete(key);
-      else portfolioFilter.add(key);
-      renderPortfolioView();
-    });
-    menu.appendChild(option);
-  }
-
-  trigger.addEventListener('click', (event) => {
-    event.stopPropagation();
-    menu.classList.toggle('hidden');
-  });
-  // Picking wallets keeps the list open; a click anywhere else closes it.
-  menu.addEventListener('click', (event) => event.stopPropagation());
-  walletBox.append(trigger, menu);
+  // The wallets are picked in the profile's list, under its name.
   syncPortfolioChips();
 
   /*
@@ -3533,7 +3487,8 @@ function syncProfileWallets() {
     button.classList.toggle('is-on', only.length > 0);
   }
   document.querySelectorAll('.pf-profile-wallet').forEach((row) => row.classList.toggle('is-on', portfolioFilter.has(row.dataset.addr)));
-  document.querySelector('.pf-profile-menu-head')?.classList.toggle('is-on', !only.length);
+  const clear = document.querySelector('.pf-profile-clear');
+  if (clear) clear.hidden = !only.length;
 }
 
 function closeProfileWallets() {
@@ -3546,14 +3501,20 @@ function toggleProfileWallets(button) {
   menu.className = 'pf-wallet-menu pf-profile-menu';
   // The list is the wallet filter too, as on OpenSea: the same choice as the
   // menu over the tables, so the two always agree.
-  const head = document.createElement('button');
-  head.type = 'button';
+  const head = document.createElement('div');
   head.className = 'pf-profile-menu-head';
-  head.textContent = t('allWallets');
-  head.addEventListener('click', () => {
+  const title = document.createElement('span');
+  title.textContent = t('allWallets');
+  // Clears a choice of several at once; there only while something is chosen.
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.className = 'pf-profile-clear';
+  clear.textContent = t('deselect');
+  clear.addEventListener('click', () => {
     portfolioFilter.clear();
     renderPortfolioView();
   });
+  head.append(title, clear);
   menu.appendChild(head);
   for (const { address } of settingsState.wallets || []) {
     const key = address.toLowerCase();
@@ -3567,6 +3528,8 @@ function toggleProfileWallets(button) {
     });
     const dot = walletDot(address);
     dot.textContent = '';
+    // Picked, the row is framed in the wallet's own colour.
+    row.style.setProperty('--wallet', dot.style.background);
     const name = document.createElement('span');
     name.className = 'pf-profile-wallet-name';
     name.textContent = walletLabelMap[address.toLowerCase()] || '';
@@ -3611,9 +3574,12 @@ function toggleProfileWallets(button) {
 }
 document.addEventListener('click', closeProfileWallets);
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeProfileWallets(); });
-// Scrolling the page would leave it floating away from its button.
+// Scrolling the page would leave it floating away from its button. Only
+// what holds the button counts: the tables scroll back to the top when a
+// wallet is picked, and that closed the list under the pointer.
 window.addEventListener('scroll', (event) => {
-  if (!event.target.closest?.('.pf-profile-menu')) closeProfileWallets();
+  const button = document.querySelector('.pf-profile-wallets');
+  if (event.target === document || (button && event.target.contains?.(button))) closeProfileWallets();
 }, true);
 window.addEventListener('resize', closeProfileWallets);
 
