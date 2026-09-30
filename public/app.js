@@ -582,11 +582,19 @@ function signedUsd(usd) {
   return `${usd >= 0 ? '+' : '−'}${compactUsd(Math.abs(usd))}`;
 }
 
-function setCompactUsd(el, value) {
-  const short = compactUsd(value);
+function setCompactUsd(el, value, from = 100000) {
+  const short = Math.abs(value) >= from && from < 100000 && Math.abs(value) < 100000
+    ? `$${(value / 1e3).toFixed(1)}K` : compactUsd(value);
   el.textContent = short;
   if (short !== formatUsd(value)) el.title = formatUsd(value);
 }
+
+/*
+ * The collections table's money columns short from $10,000 ($12.3K), not
+ * $100,000: at most nine characters ($9,999.99), so the columns are as wide
+ * as that and no wider.
+ */
+const TABLE_SHORT_FROM = 10000;
 
 /* The short names given to wallets in the settings, by address. */
 let walletLabelMap = {};
@@ -2213,7 +2221,7 @@ function portfolioRow(group) {
   const money = (usd) => {
     const cell = document.createElement('div');
     cell.className = 'pf-num pf-money';
-    if (usd) setCompactUsd(cell, usd);
+    if (usd) setCompactUsd(cell, usd, TABLE_SHORT_FROM);
     else cell.textContent = '—';
     return cell;
   };
@@ -2243,7 +2251,7 @@ ${t('costSummary', { cost: formatUsd(cost), pl: signedUsd(pl), n: known.n, total
   offer.className = 'pf-offer';
   if (group.offerUsd) {
     const share = group.floorUsd ? Math.round((group.offerUsd / group.floorUsd) * 100) : 0;
-    setCompactUsd(offer, group.offerUsd);
+    setCompactUsd(offer, group.offerUsd, TABLE_SHORT_FROM);
     offer.classList.toggle('is-low', Boolean(share) && share < 75);
   } else {
     offer.textContent = '—';
