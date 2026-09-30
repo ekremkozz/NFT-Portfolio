@@ -2272,11 +2272,12 @@ ${t('costSummary', { cost: formatUsd(cost), pl: signedUsd(pl), n: known.n, total
  * The 1D column: the floor's change over a day, as OpenSea's collection page
  * shows it. It is not in the item list, so each collection is its own
  * request -- asked for only for the rows on screen, a moment after they
- * settle, and kept an hour here as on the server.
+ * settle, and kept five minutes here as on the server: a rolling day's
+ * change an hour old was ten points off OpenSea's.
  */
 const floorChanges = new Map();
 const floorChangesAsked = new Set();
-const FLOOR_CHANGE_KEEP_MS = 60 * 60 * 1000;
+const FLOOR_CHANGE_KEEP_MS = 5 * 60 * 1000;
 let floorChangeTimer = 0;
 
 function paintFloorChange(cell) {

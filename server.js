@@ -242,14 +242,15 @@ async function openSeaGet(query, timeoutMs) {
 /*
  * A collection as its OpenSea page reads it: the page's own query, about
  * 11 KB. Kept once per collection and shared -- More takes it up to a day
- * old, the table's 1D floor column up to an hour -- and asked for once at a
+ * old, the table's 1D floor column up to five minutes -- and asked for once at a
  * time, however many rows want it.
  */
 const OS_COLLECTION_HASH = 'a1a4d7ccb70dde266bb31faecc6bd6ff2e7f4530c9d62d1747347a90b71b7926';
 const collectionPageCache = new Map();
 const collectionPageAsked = new Map();
 const COLLECTION_INFO_TTL_MS = 24 * 60 * 60 * 1000;
-const FLOOR_CHANGE_TTL_MS = 60 * 60 * 1000;
+// A rolling day's change moves by the minute: kept no longer than the page's own refresh.
+const FLOOR_CHANGE_TTL_MS = 5 * 60 * 1000;
 
 async function openSeaCollectionPage(slug, maxAgeMs) {
   const cached = collectionPageCache.get(slug);
