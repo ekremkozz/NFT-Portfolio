@@ -1134,3 +1134,5 @@ a.pf-ci-pill:hover { color: var(--text); }
 .pf-ci-link:hover { color: var(--text); background: var(--panel-2); }
 .pf-ci-link svg { width: 15px; height: 15px; }
 .pf-ci-link.is-done { color: var(--green); }
+/* In the lit row every part is selectable text, cursor and all; More is a control. */
+.pf-items-modal .pf-lit-frame .pf-more { cursor: pointer; user-select: none; }
