@@ -1087,11 +1087,15 @@ section.tab[data-tab="portfolio"] .pf-controls .pf-updated-line { grid-row: 1 / 
 
 /* The counter in two lines -- how long ago over how often -- so the controls
    card narrows and the last change beside it has room for more pictures. */
-section.tab[data-tab="portfolio"] .pf-controls { grid-template-columns: 136px auto; }
+section.tab[data-tab="portfolio"] .pf-controls { grid-template-columns: 116px auto; }
 .pf-controls .pf-updated-line .pf-updated {
   flex: 1; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
-  height: auto; min-height: 50px; padding: 6px 12px; border-radius: 12px;
+  height: auto; padding: 6px 12px; border-radius: 12px; line-height: 1.25;
 }
+/* Three lines -- the title, how long ago, how often -- as tall as the two
+   rows of buttons beside them, top and bottom in line. */
+section.tab[data-tab="portfolio"] .pf-controls .pf-updated-line { align-self: stretch; }
+.pf-controls .pf-updated-line .pf-updated em { font-style: normal; font-size: 11px; color: var(--muted); }
 .pf-controls .pf-updated-line .pf-updated i { margin-left: 0; padding-left: 0; }
 .pf-controls .pf-updated-line .pf-updated.is-reading { white-space: normal; line-height: 1.35; }
 .pf-controls .pf-updated-line .pf-updated.is-reading::before { display: none; }
