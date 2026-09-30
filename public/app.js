@@ -94,9 +94,6 @@ const STRINGS = {
     byWallet: 'By wallet',
     byRarity: 'Rarity',
     listed: 'Listed',
-    sumPaid: 'Paid',
-    sumPl: 'Profit / loss',
-    sumRarest: 'Rarest',
     boughtFor: 'Bought for {price} ({usd})',
     costSummary: 'Cost {cost} · P/L {pl} ({n} of {total} pieces)',
     tokensError: 'Tokens could not be read from OpenSea. Refresh to try again.',
@@ -208,9 +205,6 @@ const STRINGS = {
     byWallet: 'Cüzdana göre',
     byRarity: 'Rarity',
     listed: 'Satışta',
-    sumPaid: 'Ödenen',
-    sumPl: 'Kâr / zarar',
-    sumRarest: 'En nadir',
     boughtFor: 'Alış {price} ({usd})',
     costSummary: 'Maliyet {cost} · K/Z {pl} ({total} parçanın {n} tanesi)',
     tokensError: 'Tokenler OpenSea\u2019den okunamadı. Tekrar denemek için yenile.',
@@ -1360,8 +1354,8 @@ function attachPortfolioItems(row, group) {
   if (!group.held) return;
   row.classList.add('is-expandable');
   row.addEventListener('click', (event) => {
-    // The name opens them too now; OpenSea is a button in the pop-up.
-    if (event.target.closest('a[href]')) return;
+    // The name is a link of its own; it opens OpenSea, not the pieces.
+    if (event.target.closest('a')) return;
     openPortfolioItems(group, row);
   });
 }
@@ -1595,56 +1589,6 @@ function showPortfolioItems(group, row, pieces) {
       grid.appendChild(none);
     }
   };
-
-  /*
-   * Over the pieces, what the page knows of them together: what was paid,
-   * the gain or loss against today's top offer, how many are up for sale and
-   * the rarest -- with OpenSea a button away. Only what is known is shown.
-   */
-  const summary = document.createElement('div');
-  summary.className = 'pf-items-summary';
-  const stat = (label, value, extra = '') => {
-    const box = document.createElement('span');
-    box.className = `pf-items-stat ${extra}`.trim();
-    const head = document.createElement('small');
-    head.textContent = label;
-    const figure = document.createElement('b');
-    figure.textContent = value;
-    box.append(head, figure);
-    summary.appendChild(box);
-    return box;
-  };
-  const bought = pieces.filter((item) => item.costUsd);
-  if (bought.length) {
-    const paid = bought.reduce((sum, item) => sum + item.costUsd, 0);
-    const paidBox = stat(t('sumPaid'), formatUsd(paid));
-    // Some pieces came some other way (a mint, a transfer): how many were bought.
-    if (bought.length < pieces.length) {
-      const part = document.createElement('i');
-      part.textContent = ` ${bought.length}/${pieces.length}`;
-      paidBox.querySelector('b').appendChild(part);
-    }
-    const pl = bought.length * (group.offerUsd || 0) - paid;
-    stat(t('sumPl'), `${pl >= 0 ? '+' : '−'}${formatUsd(Math.abs(pl))}`, pl >= 0 ? 'is-up' : 'is-down');
-  }
-  const onSale = pieces.filter((item) => item.listUsd);
-  if (onSale.length) {
-    const lowest = Math.min(...onSale.map((item) => item.listUsd));
-    stat(t('listed'), onSale.length > 1 ? `${onSale.length} · ${formatUsd(lowest)}+` : formatUsd(lowest));
-  }
-  const ranks = pieces.map((item) => item.rarityRank).filter(Boolean);
-  if (ranks.length) stat(t('sumRarest'), `#${Math.min(...ranks)}`);
-  if (group.slug) {
-    const open = document.createElement('a');
-    open.className = 'btn btn-mini pf-items-opensea';
-    open.href = `https://opensea.io/collection/${group.slug}`;
-    open.target = '_blank';
-    open.rel = 'noopener noreferrer';
-    open.innerHTML = '<span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>';
-    open.querySelector('span').textContent = 'OpenSea';
-    summary.appendChild(open);
-  }
-  card.appendChild(summary);
 
   let tools = null;
   if (byWallet.length > 6) {
@@ -2008,10 +1952,7 @@ function portfolioRow(group) {
    */
   // The profile of the wallet holding them, when one does; else the main one.
   const profile = ((group.wallets || []).length === 1 ? group.wallets[0] : portfolioWalletList[0]) || '';
-  // Held: the name opens the pieces, in the page; OpenSea is a button there.
-  if (group.held) {
-    link.classList.add('is-pieces');
-  } else if (group.slug && group.held > 1 && profile) {
+  if (group.slug && group.held > 1 && profile) {
     link.href = `https://opensea.io/${profile}?collectionSlugs=${encodeURIComponent(group.slug)}`;
   } else if (group.slug) {
     link.href = `https://opensea.io/collection/${group.slug}`;

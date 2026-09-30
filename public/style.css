@@ -1099,18 +1099,3 @@ section.tab[data-tab="portfolio"] .pf-controls .pf-updated-line { align-self: st
 .pf-controls .pf-updated-line .pf-updated i { margin-left: 0; padding-left: 0; }
 .pf-controls .pf-updated-line .pf-updated.is-reading { white-space: normal; line-height: 1.35; }
 .pf-controls .pf-updated-line .pf-updated.is-reading::before { display: none; }
-
-/* Over a collection's pieces: what they come to together, and OpenSea. */
-.pf-items-summary {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px;
-  margin: 0 0 12px; padding: 0 4px 12px; border-bottom: 1px solid var(--line);
-}
-.pf-items-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.pf-items-stat small { font-size: 11px; color: var(--muted); }
-.pf-items-stat b { font-family: var(--mono); font-size: 13.5px; color: var(--text); white-space: nowrap; }
-.pf-items-stat b i { font-style: normal; font-weight: 400; font-size: 11px; color: var(--muted); }
-.pf-items-stat.is-up b { color: var(--green); }
-.pf-items-stat.is-down b { color: var(--red); }
-.pf-items-opensea { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
-.pf-items-opensea svg { width: 13px; height: 13px; }
-.pf-name.is-pieces { cursor: pointer; }
