@@ -1141,7 +1141,7 @@ a.pf-ci-pill:hover { color: var(--text); }
 /* Floor over offer in the heading, as in the cells under it: the column is
    as narrow as its figures, and the name takes what it gives up -- the table
    keeps its width, and the pop-up its three pieces to a line. */
-.pf-head, .pf-row { grid-template-columns: 224px 56px 92px 78px 96px 60px; }
+.pf-head, .pf-row { grid-template-columns: 260px 56px 56px 78px 96px 60px; }
 body.single-wallet .pf-head, body.single-wallet .pf-row { grid-template-columns: 328px 56px 78px 96px 60px; }
 .pf-market-head { flex-direction: column; align-items: flex-end; gap: 1px; line-height: 1.15; }
 .pf-market-sep { display: none; }
