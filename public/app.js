@@ -925,6 +925,7 @@ function syncPortfolioChips() {
         : t('nWallets', { n: only.length });
     trigger.classList.toggle('is-on', only.length > 0);
   }
+  syncProfileWallets();
   const summary = $('#portfolio-filter-note');
   if (summary) {
     summary.textContent = on
@@ -3496,12 +3497,13 @@ function paintProfile() {
     button.type = 'button';
     button.className = 'pf-profile-wallets';
     button.setAttribute('aria-haspopup', 'true');
-    button.textContent = wallets.length > 1 ? t('nWallets', { n: wallets.length }) : (label || short);
+    button.dataset.fallback = label || short;
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       toggleProfileWallets(button);
     });
     line.append(' · ', button);
+    syncProfileWallets();
   }
   $('#portfolio-profile-bio').textContent = String(profile.bio || '').split('\n').map((line) => line.trim()).filter(Boolean).join(' · ');
   const pic = $('#portfolio-profile-pic');
@@ -3519,6 +3521,21 @@ const CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
  * address, and a button that copies the whole address. Laid over the page,
  * not inside the card, which cuts off whatever overflows it.
  */
+/* The profile's button and list, set to what the filter holds. */
+function syncProfileWallets() {
+  const only = [...portfolioFilter];
+  const button = document.querySelector('.pf-profile-wallets');
+  if (button) {
+    const count = (settingsState.wallets || []).length;
+    button.textContent = !only.length ? (count > 1 ? t('nWallets', { n: count }) : button.dataset.fallback)
+      : only.length === 1 ? (walletLabelMap[only[0]] || `${only[0].slice(0, 6)}…${only[0].slice(-4)}`)
+        : t('nWallets', { n: only.length });
+    button.classList.toggle('is-on', only.length > 0);
+  }
+  document.querySelectorAll('.pf-profile-wallet').forEach((row) => row.classList.toggle('is-on', portfolioFilter.has(row.dataset.addr)));
+  document.querySelector('.pf-profile-menu-head')?.classList.toggle('is-on', !only.length);
+}
+
 function closeProfileWallets() {
   document.querySelector('.pf-profile-menu')?.remove();
 }
@@ -3527,13 +3544,27 @@ function toggleProfileWallets(button) {
   if (document.querySelector('.pf-profile-menu')) { closeProfileWallets(); return; }
   const menu = document.createElement('div');
   menu.className = 'pf-wallet-menu pf-profile-menu';
-  const head = document.createElement('div');
+  // The list is the wallet filter too, as on OpenSea: the same choice as the
+  // menu over the tables, so the two always agree.
+  const head = document.createElement('button');
+  head.type = 'button';
   head.className = 'pf-profile-menu-head';
   head.textContent = t('allWallets');
+  head.addEventListener('click', () => {
+    portfolioFilter.clear();
+    renderPortfolioView();
+  });
   menu.appendChild(head);
   for (const { address } of settingsState.wallets || []) {
+    const key = address.toLowerCase();
     const row = document.createElement('div');
     row.className = 'pf-profile-wallet';
+    row.dataset.addr = key;
+    row.addEventListener('click', () => {
+      if (portfolioFilter.has(key)) portfolioFilter.delete(key);
+      else portfolioFilter.add(key);
+      renderPortfolioView();
+    });
     const dot = walletDot(address);
     dot.textContent = '';
     const name = document.createElement('span');
@@ -3547,7 +3578,9 @@ function toggleProfileWallets(button) {
     copy.className = 'pf-profile-copy';
     copy.setAttribute('aria-label', t('copyAddress'));
     copy.innerHTML = COPY_ICON;
-    copy.addEventListener('click', async () => {
+    copy.addEventListener('click', async (event) => {
+      // Copying picks nothing.
+      event.stopPropagation();
       try {
         await navigator.clipboard.writeText(address);
       } catch {
@@ -3571,6 +3604,7 @@ function toggleProfileWallets(button) {
   }
   menu.addEventListener('click', (event) => event.stopPropagation());
   document.body.appendChild(menu);
+  syncProfileWallets();
   const box = button.getBoundingClientRect();
   menu.style.top = `${box.bottom + 6}px`;
   menu.style.left = `${Math.max(8, Math.min(box.left, window.innerWidth - menu.offsetWidth - 8))}px`;
