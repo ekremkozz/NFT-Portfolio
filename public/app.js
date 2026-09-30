@@ -1278,6 +1278,7 @@ function renderPortfolioCards() {
   tableWindow.bottom.style.height = `${groups.length * tableWindow.rowHeight}px`;
   rows.scrollTop = keptScroll;
   paintTableWindow(true);
+  askFloorChanges();
 }
 
 /*
@@ -1355,6 +1356,7 @@ $('#portfolio-cards').addEventListener('scroll', () => {
   tableWindowFrame = requestAnimationFrame(() => {
     tableWindowFrame = 0;
     paintTableWindow();
+    askFloorChanges();
   });
 }, { passive: true });
 window.addEventListener('resize', () => paintTableWindow(true));
@@ -2172,8 +2174,65 @@ ${t('costSummary', { cost: formatUsd(cost), pl: signedUsd(pl), n: known.n, total
   }
   market.appendChild(offer);
 
-  row.append(name, chain, wallets, value, market);
+  // The floor's change over a day, filled in once asked for (rows on screen only).
+  const change = document.createElement('div');
+  change.className = 'pf-num pf-change';
+  change.dataset.slug = group.slug || '';
+  paintFloorChange(change);
+
+  row.append(name, chain, wallets, value, market, change);
   return row;
+}
+
+/*
+ * The 1D column: the floor's change over a day, as OpenSea's collection page
+ * shows it. It is not in the item list, so each collection is its own
+ * request -- asked for only for the rows on screen, a moment after they
+ * settle, and kept an hour here as on the server.
+ */
+const floorChanges = new Map();
+const floorChangesAsked = new Set();
+const FLOOR_CHANGE_KEEP_MS = 60 * 60 * 1000;
+let floorChangeTimer = 0;
+
+function paintFloorChange(cell) {
+  const known = floorChanges.get(cell.dataset.slug);
+  cell.classList.remove('is-up', 'is-down');
+  if (!known) { cell.textContent = ''; return; }
+  if (known.v == null) { cell.textContent = '—'; return; }
+  const pct = Math.round(known.v * 1000) / 10;
+  cell.textContent = `${pct > 0 ? '+' : pct < 0 ? '−' : ''}${Math.abs(pct).toFixed(1)}%`;
+  if (pct) cell.classList.add(pct > 0 ? 'is-up' : 'is-down');
+}
+
+function askFloorChanges() {
+  clearTimeout(floorChangeTimer);
+  floorChangeTimer = setTimeout(async () => {
+    const rows = $('#portfolio-cards');
+    if (!rows || !tableWindow.groups.length) return;
+    const height = tableWindow.rowHeight;
+    const from = Math.max(0, Math.floor(rows.scrollTop / height));
+    const to = Math.min(tableWindow.groups.length, Math.ceil((rows.scrollTop + rows.clientHeight) / height));
+    const now = Date.now();
+    const slugs = tableWindow.groups.slice(from, to).map((group) => group.slug)
+      .filter((slug) => slug && !floorChangesAsked.has(slug)
+        && !(floorChanges.has(slug) && now - floorChanges.get(slug).at < FLOOR_CHANGE_KEEP_MS))
+      .slice(0, 20);
+    if (!slugs.length) return;
+    slugs.forEach((slug) => floorChangesAsked.add(slug));
+    try {
+      const { changes } = await api(`/api/floor-changes?slugs=${slugs.map(encodeURIComponent).join(',')}`);
+      for (const slug of slugs) floorChanges.set(slug, { at: Date.now(), v: changes?.[slug] ?? null });
+    } catch {
+      // Not answered: asked again the next time these rows are on screen.
+    } finally {
+      slugs.forEach((slug) => floorChangesAsked.delete(slug));
+    }
+    for (const row of tableWindow.drawn.values()) {
+      const cell = row.querySelector('.pf-change');
+      if (cell && slugs.includes(cell.dataset.slug)) paintFloorChange(cell);
+    }
+  }, 250);
 }
 
 /* 15.7K, 220.4K, 1.2M: a held quantity to read at a glance. */

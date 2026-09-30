@@ -240,29 +240,75 @@ async function openSeaGet(query, timeoutMs) {
 }
 
 /*
- * A collection's details as its OpenSea page heads them: who made it, how
- * many there are, when it was made, the creator fee, its links and how its
- * mint stands. The page's own query, about 11 KB, asked for only when a
- * pop-up's More is opened, and kept a day.
+ * A collection as its OpenSea page reads it: the page's own query, about
+ * 11 KB. Kept once per collection and shared -- More takes it up to a day
+ * old, the table's 1D floor column up to an hour -- and asked for once at a
+ * time, however many rows want it.
  */
 const OS_COLLECTION_HASH = 'a1a4d7ccb70dde266bb31faecc6bd6ff2e7f4530c9d62d1747347a90b71b7926';
-const collectionInfoCache = new Map();
+const collectionPageCache = new Map();
+const collectionPageAsked = new Map();
 const COLLECTION_INFO_TTL_MS = 24 * 60 * 60 * 1000;
+const FLOOR_CHANGE_TTL_MS = 60 * 60 * 1000;
 
+async function openSeaCollectionPage(slug, maxAgeMs) {
+  const cached = collectionPageCache.get(slug);
+  if (cached && Date.now() - cached.at < maxAgeMs) return cached.c;
+  if (collectionPageAsked.has(slug)) return collectionPageAsked.get(slug);
+  const asking = (async () => {
+    const query = new URLSearchParams({
+      app_id: 'os2-web',
+      operationName: 'CollectionPageLayoutQuery',
+      variables: JSON.stringify({ collectionSlug: slug }),
+      extensions: JSON.stringify({ persistedQuery: { sha256Hash: OS_COLLECTION_HASH, version: 1 } }),
+    });
+    const response = await openSeaGet(query, 15000);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const body = await response.json();
+    const c = body.data?.collectionBySlug;
+    if (!c) throw new Error(body.errors?.[0]?.message || 'no collection in the answer');
+    collectionPageCache.set(slug, { at: Date.now(), c });
+    return c;
+  })();
+  collectionPageAsked.set(slug, asking);
+  try {
+    return await asking;
+  } finally {
+    collectionPageAsked.delete(slug);
+  }
+}
+
+/*
+ * The floor's change over a day, as a fraction (0.333 for +33.3%), for the
+ * collections on screen: three asked at a time, and null where OpenSea has
+ * no figure or would not answer.
+ */
+async function openSeaFloorChanges(slugs) {
+  const changes = {};
+  const queue = [...slugs];
+  const worker = async () => {
+    while (queue.length) {
+      const slug = queue.shift();
+      try {
+        const c = await openSeaCollectionPage(slug, FLOOR_CHANGE_TTL_MS);
+        const change = Number(c.stats?.oneDay?.floorPriceChange);
+        changes[slug] = Number.isFinite(change) ? change : null;
+      } catch {
+        changes[slug] = null;
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  return changes;
+}
+
+/*
+ * A collection's details as its OpenSea page heads them: who made it, how
+ * many there are, when it was made, the creator fee, its links and how its
+ * mint stands. Asked for only when a pop-up's More is opened.
+ */
 async function openSeaCollectionInfo(slug) {
-  const cached = collectionInfoCache.get(slug);
-  if (cached && Date.now() - cached.at < COLLECTION_INFO_TTL_MS) return cached.info;
-  const query = new URLSearchParams({
-    app_id: 'os2-web',
-    operationName: 'CollectionPageLayoutQuery',
-    variables: JSON.stringify({ collectionSlug: slug }),
-    extensions: JSON.stringify({ persistedQuery: { sha256Hash: OS_COLLECTION_HASH, version: 1 } }),
-  });
-  const response = await openSeaGet(query, 15000);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const body = await response.json();
-  const c = body.data?.collectionBySlug;
-  if (!c) throw new Error(body.errors?.[0]?.message || 'no collection in the answer');
+  const c = await openSeaCollectionPage(slug, COLLECTION_INFO_TTL_MS);
   const creator = c.creatorAttribution?.profile || {};
   /*
    * The mint: live while a stage is open, ended once every stage has closed
@@ -290,7 +336,6 @@ async function openSeaCollectionInfo(slug) {
     chain: c.chain?.identifier || '',
     mint,
   };
-  collectionInfoCache.set(slug, { at: Date.now(), info });
   return info;
 }
 
@@ -1458,6 +1503,14 @@ const server = http.createServer(async (req, res) => {
       const slug = String(url.searchParams.get('slug') || '');
       if (!/^[a-z0-9-_.]{1,120}$/i.test(slug)) return send(res, 400, { error: 'invalid slug' });
       return send(res, 200, { info: await openSeaCollectionInfo(slug) });
+    }
+
+    // The 1D floor change of the collections on screen, twenty at most a time.
+    if (route === '/api/floor-changes' && req.method === 'GET') {
+      const slugs = [...new Set(String(url.searchParams.get('slugs') || '').split(','))]
+        .filter((slug) => /^[a-z0-9-_.]{1,120}$/i.test(slug))
+        .slice(0, 20);
+      return send(res, 200, { changes: await openSeaFloorChanges(slugs) });
     }
 
     // The main wallet's profile, for the card at the top.
