@@ -1134,5 +1134,13 @@ a.pf-ci-pill:hover { color: var(--text); }
 .pf-ci-link:hover { color: var(--text); background: var(--panel-2); }
 .pf-ci-link svg { width: 15px; height: 15px; }
 .pf-ci-link.is-done { color: var(--green); }
+
+/* Floor over offer in the heading, as in the cells under it: the column is
+   as narrow as its figures, and the name takes what it gives up -- the table
+   keeps its width, and the pop-up its three pieces to a line. */
+.pf-head, .pf-row { grid-template-columns: 324px 56px 52px 90px 96px; }
+body.single-wallet .pf-head, body.single-wallet .pf-row { grid-template-columns: 388px 56px 90px 96px; }
+.pf-market-head { flex-direction: column; align-items: flex-end; gap: 1px; line-height: 1.15; }
+.pf-market-sep { display: none; }
 /* In the lit row every part is selectable text, cursor and all; More is a control. */
 .pf-items-modal .pf-lit-frame .pf-more { cursor: pointer; user-select: none; }
