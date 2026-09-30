@@ -1539,7 +1539,8 @@ function fillCollectionInfo(box, info, group) {
   if (info.website) link(ICONS.globe, t('website'), info.website);
   if (info.twitter) link(ICONS.x, 'X', `https://x.com/${info.twitter}`);
   // No OpenSea button: the collection's name above opens its page there.
-  box.appendChild(links);
+  // No links at all, no empty frame.
+  if (links.children.length) box.appendChild(links);
 }
 
 function showPortfolioItems(group, row, pieces) {
