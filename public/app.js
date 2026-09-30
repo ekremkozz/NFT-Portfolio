@@ -2172,18 +2172,8 @@ function portfolioRow(group) {
   const link = document.createElement('a');
   link.className = 'pf-name';
   link.textContent = group.name;
-  /*
-   * Held more than once: the pieces themselves, on the profile's Items tab
-   * filtered to this collection, which is where they can be listed or
-   * compared. Held once: the collection's own page, as before.
-   */
-  // The profile of the wallet holding them, when one does; else the main one.
-  const profile = ((group.wallets || []).length === 1 ? group.wallets[0] : portfolioWalletList[0]) || '';
-  if (group.slug && group.held > 1 && profile) {
-    link.href = `https://opensea.io/${profile}?collectionSlugs=${encodeURIComponent(group.slug)}`;
-  } else if (group.slug) {
-    link.href = `https://opensea.io/collection/${group.slug}`;
-  }
+  // The name opens the collection's own page on OpenSea, however many are held.
+  if (group.slug) link.href = `https://opensea.io/collection/${group.slug}`;
   if (link.href) {
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
