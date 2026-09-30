@@ -239,6 +239,61 @@ async function openSeaGet(query, timeoutMs) {
   }
 }
 
+/*
+ * A collection's details as its OpenSea page heads them: who made it, how
+ * many there are, when it was made, the creator fee, its links and how its
+ * mint stands. The page's own query, about 11 KB, asked for only when a
+ * pop-up's More is opened, and kept a day.
+ */
+const OS_COLLECTION_HASH = 'a1a4d7ccb70dde266bb31faecc6bd6ff2e7f4530c9d62d1747347a90b71b7926';
+const collectionInfoCache = new Map();
+const COLLECTION_INFO_TTL_MS = 24 * 60 * 60 * 1000;
+
+async function openSeaCollectionInfo(slug) {
+  const cached = collectionInfoCache.get(slug);
+  if (cached && Date.now() - cached.at < COLLECTION_INFO_TTL_MS) return cached.info;
+  const query = new URLSearchParams({
+    app_id: 'os2-web',
+    operationName: 'CollectionPageLayoutQuery',
+    variables: JSON.stringify({ collectionSlug: slug }),
+    extensions: JSON.stringify({ persistedQuery: { sha256Hash: OS_COLLECTION_HASH, version: 1 } }),
+  });
+  const response = await openSeaGet(query, 15000);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const body = await response.json();
+  const c = body.data?.collectionBySlug;
+  if (!c) throw new Error(body.errors?.[0]?.message || 'no collection in the answer');
+  const creator = c.creatorAttribution?.profile || {};
+  /*
+   * The mint: live while a stage is open, ended once every stage has closed
+   * or all are minted, upcoming before the first. No drop on OpenSea, no word.
+   */
+  let mint = '';
+  const drop = c.drop;
+  if (drop) {
+    const now = Date.now();
+    const stages = (drop.stages || []).map((s) => ({ start: Date.parse(s.startTime), end: Date.parse(s.endTime) }));
+    if (drop.activeDropStage) mint = 'live';
+    else if (drop.maxSupply && drop.totalSupply >= drop.maxSupply) mint = 'ended';
+    else if (stages.length && stages.every((s) => s.end && s.end < now)) mint = 'ended';
+    else if (stages.some((s) => s.start > now)) mint = 'upcoming';
+  }
+  const info = {
+    creator: creator.displayName || creator.username || '',
+    creatorUrl: creator.username ? `https://opensea.io/${creator.username}` : (creator.address ? `https://opensea.io/${creator.address}` : ''),
+    supply: c.stats?.totalSupply || drop?.totalSupply || 0,
+    createdAt: c.createdAt || '',
+    feeBps: c.fees?.totalCreatorFee?.feeBasisPoints ?? null,
+    website: /^https?:\/\//i.test(c.externalUrl || '') ? c.externalUrl : '',
+    twitter: /^[A-Za-z0-9_]{1,30}$/.test(c.twitterUsername || '') ? c.twitterUsername : '',
+    contract: c.address || '',
+    chain: c.chain?.identifier || '',
+    mint,
+  };
+  collectionInfoCache.set(slug, { at: Date.now(), info });
+  return info;
+}
+
 
 /*
  * Fungible balances across the same wallets. A portfolio that counts only the
@@ -1396,6 +1451,13 @@ const server = http.createServer(async (req, res) => {
       const pieces = lastPieces.get(url.searchParams.get('key') || '');
       if (!pieces) return send(res, 404, { error: 'Not read yet; refresh the page' });
       return send(res, 200, { items: pieces });
+    }
+
+    // A collection's details, for its pop-up's More: asked for on the click.
+    if (route === '/api/collection-info' && req.method === 'GET') {
+      const slug = String(url.searchParams.get('slug') || '');
+      if (!/^[a-z0-9-_.]{1,120}$/i.test(slug)) return send(res, 400, { error: 'invalid slug' });
+      return send(res, 200, { info: await openSeaCollectionInfo(slug) });
     }
 
     // The main wallet's profile, for the card at the top.

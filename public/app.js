@@ -94,6 +94,16 @@ const STRINGS = {
     byWallet: 'By wallet',
     byRarity: 'Rarity',
     listed: 'Listed',
+    more: 'More',
+    less: 'Less',
+    byCreator: 'By {name}',
+    creatorFee: '{v}% creator fee',
+    mintEnded: 'Mint ended',
+    mintLive: 'Minting now',
+    mintSoon: 'Mint soon',
+    copyContract: 'Copy the contract address',
+    website: 'Website',
+    openOnOpenSea: 'Open on OpenSea',
     boughtFor: 'Bought for {price} ({usd})',
     costSummary: 'Cost {cost} · P/L {pl} ({n} of {total} pieces)',
     tokensError: 'Tokens could not be read from OpenSea. Refresh to try again.',
@@ -205,6 +215,16 @@ const STRINGS = {
     byWallet: 'Cüzdana göre',
     byRarity: 'Rarity',
     listed: 'Satışta',
+    more: 'Daha fazla',
+    less: 'Daha az',
+    byCreator: '{name} yapımı',
+    creatorFee: '%{v} yaratıcı ücreti',
+    mintEnded: 'Mint bitti',
+    mintLive: 'Mint sürüyor',
+    mintSoon: 'Mint yakında',
+    copyContract: 'Kontrat adresini kopyala',
+    website: 'Web sitesi',
+    openOnOpenSea: 'OpenSea\u2019da aç',
     boughtFor: 'Alış {price} ({usd})',
     costSummary: 'Maliyet {cost} · K/Z {pl} ({total} parçanın {n} tanesi)',
     tokensError: 'Tokenler OpenSea\u2019den okunamadı. Tekrar denemek için yenile.',
@@ -1386,6 +1406,71 @@ async function openPortfolioItems(group, row) {
 
 let closeOpenPieces = null;
 
+const MORE_KEY = 'nftPortfolio.collectionMore';
+
+const ICONS = {
+  stack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>',
+  globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+  x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.37 5.77L17.75 3Zm-1.08 16.2h1.7L7.4 4.73H5.58l11.09 14.47Z"/></svg>',
+  open: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>',
+};
+
+/* The details under More: pills on the left, the links on the right. */
+function fillCollectionInfo(box, info, group) {
+  box.textContent = '';
+  const pill = (text, href) => {
+    const el = document.createElement(href ? 'a' : 'span');
+    el.className = 'pf-ci-pill';
+    if (href) {
+      el.href = href;
+      el.target = '_blank';
+      el.rel = 'noopener noreferrer';
+    }
+    el.textContent = text;
+    box.appendChild(el);
+    return el;
+  };
+  if (info.creator) pill(t('byCreator', { name: info.creator }), info.creatorUrl);
+  if (info.supply) pill(Number(info.supply).toLocaleString('en-US')).insertAdjacentHTML('afterbegin', ICONS.stack);
+  const made = Date.parse(info.createdAt);
+  if (made) pill(new Date(made).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { month: 'short', year: 'numeric' }));
+  if (info.feeBps != null) pill(t('creatorFee', { v: Math.round(info.feeBps) / 100 }));
+  const mint = { ended: 'mintEnded', live: 'mintLive', upcoming: 'mintSoon' }[info.mint];
+  if (mint) pill(t(mint)).classList.add(info.mint === 'ended' ? 'is-quiet' : 'is-live');
+
+  const links = document.createElement('span');
+  links.className = 'pf-ci-links';
+  const link = (html, label, href) => {
+    const el = document.createElement(href ? 'a' : 'button');
+    el.className = 'pf-ci-link';
+    el.setAttribute('aria-label', label);
+    el.innerHTML = html;
+    if (href) {
+      el.href = href;
+      el.target = '_blank';
+      el.rel = 'noopener noreferrer';
+    } else {
+      el.type = 'button';
+    }
+    links.appendChild(el);
+    return el;
+  };
+  if (info.contract) {
+    const copy = link(COPY_ICON, t('copyContract'));
+    copy.addEventListener('click', async () => {
+      if (!(await copyText(info.contract))) return;
+      copy.innerHTML = CHECK_ICON;
+      copy.classList.add('is-done');
+      clearTimeout(copy.doneTimer);
+      copy.doneTimer = setTimeout(() => { copy.innerHTML = COPY_ICON; copy.classList.remove('is-done'); }, 1500);
+    });
+  }
+  if (info.website) link(ICONS.globe, t('website'), info.website);
+  if (info.twitter) link(ICONS.x, 'X', `https://x.com/${info.twitter}`);
+  link(ICONS.open, t('openOnOpenSea'), `https://opensea.io/collection/${group.slug}`);
+  box.appendChild(links);
+}
+
 function showPortfolioItems(group, row, pieces) {
   // The one open, closed properly: its key and resize listeners go with it.
   if (closeOpenPieces) closeOpenPieces();
@@ -1699,6 +1784,59 @@ function showPortfolioItems(group, row, pieces) {
   lit.querySelectorAll('canvas').forEach((copy, i) => {
     try { copy.getContext('2d').drawImage(drawn[i], 0, 0); } catch { /* left blank */ }
   });
+  /*
+   * More, under the name in the lit row: the collection's details as its
+   * OpenSea page heads them -- who made it, how many, when, the creator fee,
+   * the mint, its links -- between the row and the pieces. Asked for on the
+   * first opening; open or shut as it was last left.
+   */
+  const info = document.createElement('div');
+  info.className = 'pf-collection-info';
+  info.hidden = true;
+  card.insertBefore(info, card.firstChild);
+  let openInfo = null;
+  const litIdent = lit.querySelector('.pf-ident');
+  if (group.slug && litIdent) {
+    const logoCopy = litIdent.querySelector('.pf-logo');
+    const title = document.createElement('span');
+    title.className = 'pf-lit-title';
+    title.append(...[...litIdent.children].filter((el) => el !== logoCopy));
+    const more = document.createElement('span');
+    more.className = 'pf-more';
+    more.setAttribute('role', 'button');
+    more.tabIndex = 0;
+    const namebox = document.createElement('span');
+    namebox.className = 'pf-lit-namebox';
+    namebox.append(title, more);
+    litIdent.appendChild(namebox);
+    let asked = false;
+    openInfo = async (open) => {
+      info.hidden = !open;
+      more.textContent = open ? t('less') : t('more');
+      more.classList.toggle('is-open', open);
+      try { localStorage.setItem(MORE_KEY, open ? '1' : '0'); } catch { /* not kept */ }
+      if (open && !asked) {
+        asked = true;
+        info.textContent = t('loading');
+        place();
+        try {
+          fillCollectionInfo(info, (await api(`/api/collection-info?slug=${encodeURIComponent(group.slug)}`)).info, group);
+        } catch {
+          asked = false;
+          info.textContent = t('couldNotRead');
+        }
+      }
+      if (modal.isConnected) place();
+    };
+    more.addEventListener('click', () => openInfo(info.hidden));
+    more.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openInfo(info.hidden);
+      }
+    });
+    more.textContent = t('more');
+  }
   const heading = document.querySelector('.pf-main .pf-head');
   const headLit = heading ? heading.cloneNode(true) : null;
   if (headLit) {
@@ -1792,6 +1930,10 @@ function showPortfolioItems(group, row, pieces) {
   place();
   fillPieces();
   window.addEventListener('resize', place);
+  // Left open last time: open again, with this collection's details.
+  let moreOpen = false;
+  try { moreOpen = localStorage.getItem(MORE_KEY) === '1'; } catch { /* shut */ }
+  if (openInfo && moreOpen) openInfo(true);
 
   const close = () => {
     forgetPictures(modal);
@@ -3508,6 +3650,23 @@ function walletBalances() {
   return usd;
 }
 
+/* Text to the clipboard; without the permission, through a selected field. */
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(field);
+    field.select();
+    const done = document.execCommand('copy');
+    field.remove();
+    return done;
+  }
+}
+
 function closeProfileWallets() {
   document.querySelector('.pf-profile-menu')?.remove();
 }
@@ -3566,19 +3725,7 @@ function toggleProfileWallets(button) {
     copy.addEventListener('click', async (event) => {
       // Copying picks nothing.
       event.stopPropagation();
-      try {
-        await navigator.clipboard.writeText(address);
-      } catch {
-        // No clipboard permission: the older way, through a selected field.
-        const field = document.createElement('textarea');
-        field.value = address;
-        field.style.cssText = 'position:fixed;opacity:0;';
-        document.body.appendChild(field);
-        field.select();
-        const done = document.execCommand('copy');
-        field.remove();
-        if (!done) return;
-      }
+      if (!(await copyText(address))) return;
       copy.innerHTML = CHECK_ICON;
       copy.classList.add('is-done');
       clearTimeout(copy.doneTimer);
