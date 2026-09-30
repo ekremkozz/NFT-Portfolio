@@ -2172,8 +2172,8 @@ function portfolioRow(group) {
   const link = document.createElement('a');
   link.className = 'pf-name';
   link.textContent = group.name;
-  // The name opens the collection's own page on OpenSea, however many are held.
-  if (group.slug) link.href = `https://opensea.io/collection/${group.slug}`;
+  // The name opens the collection's page on OpenSea, showing the pieces you own.
+  if (group.slug) link.href = `https://opensea.io/collection/${group.slug}?status=ownedByYou`;
   if (link.href) {
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
