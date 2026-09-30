@@ -1406,7 +1406,8 @@ async function openPortfolioItems(group, row) {
 
 let closeOpenPieces = null;
 
-const MORE_KEY = 'nftPortfolio.collectionMore';
+// More left open stays open from one pop-up to the next, until the page is reloaded.
+let collectionMoreOpen = false;
 
 const ICONS = {
   stack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>',
@@ -1436,7 +1437,7 @@ function fillCollectionInfo(box, info, group) {
   if (made) pill(new Date(made).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { month: 'short', year: 'numeric' }));
   if (info.feeBps != null) pill(t('creatorFee', { v: Math.round(info.feeBps) / 100 }));
   const mint = { ended: 'mintEnded', live: 'mintLive', upcoming: 'mintSoon' }[info.mint];
-  if (mint) pill(t(mint)).classList.add(info.mint === 'ended' ? 'is-quiet' : 'is-live');
+  if (mint) pill(t(mint)).classList.toggle('is-live', info.mint === 'live');
 
   const links = document.createElement('span');
   links.className = 'pf-ci-links';
@@ -1788,7 +1789,7 @@ function showPortfolioItems(group, row, pieces) {
    * More, under the name in the lit row: the collection's details as its
    * OpenSea page heads them -- who made it, how many, when, the creator fee,
    * the mint, its links -- between the row and the pieces. Asked for on the
-   * first opening; open or shut as it was last left.
+   * first opening; open or shut as it was last left, until a reload.
    */
   const info = document.createElement('div');
   info.className = 'pf-collection-info';
@@ -1814,7 +1815,7 @@ function showPortfolioItems(group, row, pieces) {
       info.hidden = !open;
       more.textContent = open ? t('less') : t('more');
       more.classList.toggle('is-open', open);
-      try { localStorage.setItem(MORE_KEY, open ? '1' : '0'); } catch { /* not kept */ }
+      collectionMoreOpen = open;
       if (open && !asked) {
         asked = true;
         info.textContent = t('loading');
@@ -1931,9 +1932,7 @@ function showPortfolioItems(group, row, pieces) {
   fillPieces();
   window.addEventListener('resize', place);
   // Left open last time: open again, with this collection's details.
-  let moreOpen = false;
-  try { moreOpen = localStorage.getItem(MORE_KEY) === '1'; } catch { /* shut */ }
-  if (openInfo && moreOpen) openInfo(true);
+  if (openInfo && collectionMoreOpen) openInfo(true);
 
   const close = () => {
     forgetPictures(modal);

@@ -1124,7 +1124,6 @@ section.tab[data-tab="portfolio"] .pf-controls .pf-updated-line { align-self: st
 }
 a.pf-ci-pill:hover { color: var(--text); }
 .pf-ci-pill svg { width: 12px; height: 12px; }
-.pf-ci-pill.is-quiet { border-color: transparent; background: var(--panel-3); }
 .pf-ci-pill.is-live { color: var(--green); border-color: var(--green); }
 .pf-ci-links { margin-left: auto; display: flex; gap: 2px; }
 .pf-ci-link {
