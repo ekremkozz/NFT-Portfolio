@@ -2423,7 +2423,7 @@ function tokenFigures(token) {
     return el;
   };
   const value = cell('', 'pf-money is-value');
-  setCompactUsd(value, token.usd);
+  setCompactUsd(value, token.usd, TABLE_SHORT_FROM);
 
   const wallets = document.createElement('div');
   wallets.className = 'pf-wallets-col';
