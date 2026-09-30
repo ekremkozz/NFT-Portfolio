@@ -2286,7 +2286,11 @@ function paintFloorChange(cell) {
   if (!known) { cell.textContent = ''; return; }
   if (known.v == null) { cell.textContent = '—'; return; }
   const pct = Math.round(known.v * 1000) / 10;
-  cell.textContent = `${pct > 0 ? '+' : pct < 0 ? '−' : ''}${Math.abs(pct).toFixed(1)}%`;
+  // A floor can rise a thousandfold in a day: +1.2K%, as the money columns shorten.
+  const size = Math.abs(pct);
+  const figure = size >= 1000 ? `${(size / 1000).toFixed(1)}K` : size.toFixed(1);
+  cell.textContent = `${pct > 0 ? '+' : pct < 0 ? '−' : ''}${figure}%`;
+  cell.title = size >= 1000 ? `${pct > 0 ? '+' : '−'}${size.toLocaleString('en-US')}%` : '';
   if (pct) cell.classList.add(pct > 0 ? 'is-up' : 'is-down');
 }
 
