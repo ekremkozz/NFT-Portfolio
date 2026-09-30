@@ -1908,10 +1908,9 @@ function showPortfolioItems(group, row, pieces) {
     const margin = 12;
     // The pieces scroll inside rather than push the panel past the table.
     card.style.maxHeight = `${Math.max(120, Math.min(area.height, viewHeight() - margin * 2) - unitHeight + edge)}px`;
-    // As wide as the table's own panel, edge to edge, not just its rows --
-    // and so too with More open, whose details would be squeezed otherwise.
-    const wide = full || !info.hidden;
-    card.style.width = wide ? `${area.width}px` : '';
+    // As wide as the table's own panel, edge to edge, however few the pieces:
+    // one flat panel under the row, and room for More's details.
+    card.style.width = `${area.width}px`;
     const total = unitHeight - edge + card.offsetHeight;
     const unitTop = Math.max(margin, Math.min(area.top + (area.height - total) / 2, viewHeight() - margin - total));
 
@@ -1923,12 +1922,11 @@ function showPortfolioItems(group, row, pieces) {
     if (headLit) Object.assign(headLit.style, { left: `${inset}px`, top: '0', width: `${line.width}px`, height: `${headHeight}px` });
     Object.assign(lit.style, { left: `${inset}px`, top: `${headHeight}px`, width: `${line.width}px`, height: `${line.height}px` });
 
-    // The pieces flush under it, a line between, square corners where they
-    // meet; where the pop-up is narrower, that corner of the piece stays round.
+    // The pieces flush under it, a line between, square corners where they meet.
     card.style.left = `${area.left}px`;
     card.style.top = `${unitTop + unitHeight - edge}px`;
     card.style.borderRadius = `0 0 ${radius} ${radius}`;
-    unit.style.borderRadius = `${radius} ${radius} ${wide ? '0' : radius} 0`;
+    unit.style.borderRadius = `${radius} ${radius} 0 0`;
   };
   place();
   fillPieces();
