@@ -1152,5 +1152,21 @@ body.single-wallet .pf-head, body.single-wallet .pf-row { grid-template-columns:
 .pf-change { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .pf-change.is-up { color: var(--green); }
 .pf-change.is-down { color: var(--red); }
-/* In the heading, OFFER a step right of FLOOR above it. */
-.pf-market-head .pf-sort[data-sort="offer"] { margin-right: -8px; }
+/* Floor over offer, one control; OFFER a step right of FLOOR above it. */
+.pf-market-head { position: relative; }
+.pf-market-trigger {
+  display: inline-flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 1.15;
+  background: none; border: 0; padding: 0; font: inherit; color: inherit;
+  letter-spacing: inherit; text-transform: inherit; cursor: pointer;
+}
+.pf-market-trigger:hover { color: var(--text); }
+.pf-market-trigger > span::after { content: ' \2195'; opacity: .45; }
+.pf-market-trigger > span[data-dir="desc"]::after { content: ' \25BE'; opacity: 1; }
+.pf-market-trigger > span[data-dir="asc"]::after { content: ' \25B4'; opacity: 1; }
+.pf-market-trigger > span[data-dir="desc"], .pf-market-trigger > span[data-dir="asc"] { color: var(--text); }
+.pf-market-trigger[data-ratio="1"] > span { color: var(--text); }
+.pf-mt-offer { margin-right: -8px; }
+.pf-market-menu {
+  top: calc(100% + 6px); right: -8px; min-width: 210px;
+  text-transform: none; letter-spacing: 0; text-align: left;
+}

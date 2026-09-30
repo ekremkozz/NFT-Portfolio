@@ -93,6 +93,11 @@ const STRINGS = {
     all: 'All',
     byWallet: 'By wallet',
     byRarity: 'Rarity',
+    sortFloorDesc: 'Floor: high to low',
+    sortFloorAsc: 'Floor: low to high',
+    sortOfferDesc: 'Offer: high to low',
+    sortOfferAsc: 'Offer: low to high',
+    sortRatio: 'Offer closest to floor',
     listed: 'Listed',
     more: 'More',
     less: 'Less',
@@ -214,6 +219,11 @@ const STRINGS = {
     all: 'Tümü',
     byWallet: 'Cüzdana göre',
     byRarity: 'Rarity',
+    sortFloorDesc: 'Floor: yüksekten düşüğe',
+    sortFloorAsc: 'Floor: düşükten yükseğe',
+    sortOfferDesc: 'Offer: yüksekten düşüğe',
+    sortOfferAsc: 'Offer: düşükten yükseğe',
+    sortRatio: 'Floor\u2019a en yakın offer',
     listed: 'Satışta',
     more: 'Daha fazla',
     less: 'Daha az',
@@ -1204,7 +1214,48 @@ const PORTFOLIO_SORT_VALUE = {
   value: (group) => group.valueUsd || 0,
   floor: (group) => group.floorUsd || 0,
   offer: (group) => group.offerUsd || 0,
+  // The offer as a share of the floor: near 1, sold for about the floor.
+  ratio: (group) => (group.floorUsd > 0 ? (group.offerUsd || 0) / group.floorUsd : 0),
 };
+
+/*
+ * Floor and offer share one heading, and one control: a click opens the
+ * orders they can give, as the pieces' sort menu does -- two small arrows
+ * stacked in a narrow column were hard to hit and harder to tell apart.
+ */
+const MARKET_SORTS = [
+  ['floor', -1, 'sortFloorDesc'], ['floor', 1, 'sortFloorAsc'],
+  ['offer', -1, 'sortOfferDesc'], ['offer', 1, 'sortOfferAsc'],
+  ['ratio', -1, 'sortRatio'],
+];
+
+function closeMarketMenu() {
+  document.querySelector('.pf-market-menu')?.remove();
+}
+
+$('#pf-market-trigger').addEventListener('click', (event) => {
+  event.stopPropagation();
+  if (document.querySelector('.pf-market-menu')) { closeMarketMenu(); return; }
+  const menu = document.createElement('div');
+  menu.className = 'pf-wallet-menu pf-market-menu';
+  for (const [key, dir, label] of MARKET_SORTS) {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'portfolio-wallet pf-wallet-option is-radio';
+    option.classList.toggle('is-on', portfolioSort.key === key && portfolioSort.dir === dir);
+    option.textContent = t(label);
+    option.addEventListener('click', () => {
+      portfolioSort = { key, dir };
+      closeMarketMenu();
+      renderPortfolioCards();
+    });
+    menu.appendChild(option);
+  }
+  menu.addEventListener('click', (event) => event.stopPropagation());
+  event.currentTarget.parentElement.appendChild(menu);
+});
+document.addEventListener('click', closeMarketMenu);
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeMarketMenu(); });
 
 function paintPortfolioSort() {
   $$('.pf-sort').forEach((button) => {
@@ -1212,6 +1263,16 @@ function paintPortfolioSort() {
     button.classList.toggle('is-on', on);
     button.dataset.dir = on ? (portfolioSort.dir < 0 ? 'desc' : 'asc') : '';
   });
+  // The heading says which of its orders is on: the word lit, with its arrow.
+  const trigger = $('#pf-market-trigger');
+  if (trigger) {
+    const dir = portfolioSort.dir < 0 ? 'desc' : 'asc';
+    const { key } = portfolioSort;
+    trigger.classList.toggle('is-on', ['floor', 'offer', 'ratio'].includes(key));
+    trigger.querySelector('.pf-mt-floor').dataset.dir = key === 'floor' ? dir : '';
+    trigger.querySelector('.pf-mt-offer').dataset.dir = key === 'offer' || key === 'ratio' ? dir : '';
+    trigger.dataset.ratio = key === 'ratio' ? '1' : '';
+  }
 }
 
 $$('.pf-sort').forEach((button) => button.addEventListener('click', () => {
