@@ -1084,3 +1084,14 @@ section.tab[data-tab="portfolio"] .pf-controls .pf-updated-line { grid-row: 1 / 
 
 /* Each wallet's worth, between its address and the copy button. */
 .pf-profile-wallet-usd { min-width: 64px; text-align: right; font-family: var(--mono); font-weight: 700; color: var(--text); }
+
+/* The counter in two lines -- how long ago over how often -- so the controls
+   card narrows and the last change beside it has room for more pictures. */
+section.tab[data-tab="portfolio"] .pf-controls { grid-template-columns: 136px auto; }
+.pf-controls .pf-updated-line .pf-updated {
+  flex: 1; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
+  height: auto; min-height: 50px; padding: 6px 12px; border-radius: 12px;
+}
+.pf-controls .pf-updated-line .pf-updated i { margin-left: 0; padding-left: 0; }
+.pf-controls .pf-updated-line .pf-updated.is-reading { white-space: normal; line-height: 1.35; }
+.pf-controls .pf-updated-line .pf-updated.is-reading::before { display: none; }
