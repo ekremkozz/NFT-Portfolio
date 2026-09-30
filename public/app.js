@@ -3491,6 +3491,23 @@ function syncProfileWallets() {
   if (clear) clear.hidden = !only.length;
 }
 
+/*
+ * What each wallet holds, by lowercased address: its NFTs at the top offer,
+ * as the totals count them, and its tokens -- whatever the filter is set to.
+ */
+function walletBalances() {
+  const usd = {};
+  const add = (owner, value) => {
+    const key = String(owner || '').toLowerCase();
+    if (key && value > 0) usd[key] = (usd[key] || 0) + value;
+  };
+  for (const group of portfolioGroups) {
+    for (const [owner, n] of Object.entries(group.byWallet || {})) add(owner, n * (group.offerUsd || 0));
+  }
+  for (const token of portfolioTokens) add(token.owner, token.usd || 0);
+  return usd;
+}
+
 function closeProfileWallets() {
   document.querySelector('.pf-profile-menu')?.remove();
 }
@@ -3499,6 +3516,7 @@ function toggleProfileWallets(button) {
   if (document.querySelector('.pf-profile-menu')) { closeProfileWallets(); return; }
   const menu = document.createElement('div');
   menu.className = 'pf-wallet-menu pf-profile-menu';
+  const balances = walletBalances();
   // The list is the wallet filter too, as on OpenSea: the same choice as the
   // menu over the tables, so the two always agree.
   const head = document.createElement('div');
@@ -3536,6 +3554,10 @@ function toggleProfileWallets(button) {
     const addr = document.createElement('span');
     addr.className = 'pf-profile-wallet-addr';
     addr.textContent = `${address.slice(0, 6)}…${address.slice(-4)}`;
+    const worth = document.createElement('span');
+    worth.className = 'pf-profile-wallet-usd';
+    const usd = balances[key] || 0;
+    worth.textContent = usd >= 100000 ? compactUsd(usd) : formatUsd(usd);
     const copy = document.createElement('button');
     copy.type = 'button';
     copy.className = 'pf-profile-copy';
@@ -3562,7 +3584,7 @@ function toggleProfileWallets(button) {
       clearTimeout(copy.doneTimer);
       copy.doneTimer = setTimeout(() => { copy.innerHTML = COPY_ICON; copy.classList.remove('is-done'); }, 1500);
     });
-    row.append(dot, name, addr, copy);
+    row.append(dot, name, addr, worth, copy);
     menu.appendChild(row);
   }
   menu.addEventListener('click', (event) => event.stopPropagation());

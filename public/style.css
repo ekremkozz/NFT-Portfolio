@@ -1081,3 +1081,6 @@ input.pf-profile-input {
 .pf-profile-wallets.is-on { color: var(--accent); }
 /* Without the wallet menu, the counter takes the controls card's both lines. */
 section.tab[data-tab="portfolio"] .pf-controls .pf-updated-line { grid-row: 1 / span 2; }
+
+/* Each wallet's worth, between its address and the copy button. */
+.pf-profile-wallet-usd { min-width: 64px; text-align: right; font-family: var(--mono); font-weight: 700; color: var(--text); }
