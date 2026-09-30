@@ -1154,18 +1154,21 @@ body.single-wallet .pf-head, body.single-wallet .pf-row { grid-template-columns:
 .pf-change.is-down { color: var(--red); }
 /* Floor over offer, one control; OFFER a step right of FLOOR above it. */
 .pf-market-head { position: relative; }
+/* It looks like the menu it opens: the two words, one chevron beside both,
+   a ground on hover; the word the table is sorted by in white. */
 .pf-market-trigger {
-  display: inline-flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 1.15;
-  background: none; border: 0; padding: 0; font: inherit; color: inherit;
+  display: inline-grid; grid-template-columns: auto auto; align-items: center; column-gap: 6px;
+  margin-right: -6px; padding: 3px 6px; border-radius: 8px;
+  background: none; border: 0; font: inherit; color: inherit; line-height: 1.15;
   letter-spacing: inherit; text-transform: inherit; cursor: pointer;
 }
-.pf-market-trigger:hover { color: var(--text); }
-.pf-market-trigger > span::after { content: ' \2195'; opacity: .45; }
-.pf-market-trigger > span[data-dir="desc"]::after { content: ' \25BE'; opacity: 1; }
-.pf-market-trigger > span[data-dir="asc"]::after { content: ' \25B4'; opacity: 1; }
-.pf-market-trigger > span[data-dir="desc"], .pf-market-trigger > span[data-dir="asc"] { color: var(--text); }
+.pf-market-trigger > span { grid-column: 1; justify-self: end; }
+.pf-market-trigger::after { content: '\25BE'; grid-column: 2; grid-row: 1 / span 2; font-size: 10px; }
+.pf-market-trigger:hover, .pf-market-trigger.is-open { color: var(--text); background: var(--panel-2); }
+.pf-market-trigger > span[data-dir="desc"], .pf-market-trigger > span[data-dir="asc"],
 .pf-market-trigger[data-ratio="1"] > span { color: var(--text); }
-.pf-mt-offer { margin-right: -8px; }
+/* OFFER a step right of FLOOR: FLOOR held back, so neither runs into the chevron. */
+.pf-mt-floor { margin-right: 8px; }
 .pf-market-menu {
   top: calc(100% + 6px); right: -8px; min-width: 210px;
   text-transform: none; letter-spacing: 0; text-align: left;

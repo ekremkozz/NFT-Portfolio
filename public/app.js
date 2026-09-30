@@ -1231,6 +1231,7 @@ const MARKET_SORTS = [
 
 function closeMarketMenu() {
   document.querySelector('.pf-market-menu')?.remove();
+  $('#pf-market-trigger')?.classList.remove('is-open');
 }
 
 $('#pf-market-trigger').addEventListener('click', (event) => {
@@ -1253,6 +1254,7 @@ $('#pf-market-trigger').addEventListener('click', (event) => {
   }
   menu.addEventListener('click', (event) => event.stopPropagation());
   event.currentTarget.parentElement.appendChild(menu);
+  event.currentTarget.classList.add('is-open');
 });
 document.addEventListener('click', closeMarketMenu);
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeMarketMenu(); });
