@@ -100,6 +100,7 @@ const STRINGS = {
     noTokens: 'No tokens in these wallets.',
     backToTop: 'Back to the top',
     editName: 'Edit the name',
+    copyAddress: 'Copy the address',
     editNameHint: 'Leave empty for your OpenSea name',
     historyTitle: 'Price changes · last {range}',
     rangeHours: '{n} hours',
@@ -209,6 +210,7 @@ const STRINGS = {
     noTokens: 'Bu cüzdanlarda token yok.',
     backToTop: 'Başa dön',
     editName: 'Adı düzenle',
+    copyAddress: 'Adresi kopyala',
     editNameHint: 'OpenSea adın için boş bırak',
     historyTitle: 'Fiyat değişimleri · son {range}',
     rangeHours: '{n} saat',
@@ -3478,10 +3480,29 @@ function paintProfile() {
   $('#portfolio-profile-edit').setAttribute('aria-label', t('editName'));
   // The name opens this wallet's portfolio on OpenSea.
   name.href = `https://opensea.io/${address}/portfolio`;
-  const parts = [short];
-  if (profile.ens && profile.ens !== profile.name) parts.push(profile.ens);
-  if (wallets.length > 1) parts.push(t('nWallets', { n: wallets.length }));
-  $('#portfolio-profile-address').textContent = parts.join(' · ');
+  /*
+   * Under the name: the ENS name (the address only when there is none), then
+   * a button for the wallets -- their list, each with a copy button, as
+   * OpenSea's own profile has it. A line of addresses did not fit.
+   */
+  const line = $('#portfolio-profile-address');
+  line.textContent = '';
+  const ens = document.createElement('span');
+  ens.className = 'pf-profile-ens';
+  ens.textContent = profile.ens || short;
+  line.appendChild(ens);
+  if (wallets.length) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'pf-profile-wallets';
+    button.setAttribute('aria-haspopup', 'true');
+    button.textContent = wallets.length > 1 ? t('nWallets', { n: wallets.length }) : (label || short);
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleProfileWallets(button);
+    });
+    line.append(' · ', button);
+  }
   $('#portfolio-profile-bio').textContent = String(profile.bio || '').split('\n').map((line) => line.trim()).filter(Boolean).join(' · ');
   const pic = $('#portfolio-profile-pic');
   forgetPictures(pic);
@@ -3489,6 +3510,78 @@ function paintProfile() {
   if (profile.image) pic.appendChild(stillImage(profile.image, 48, ''));
   else pic.textContent = address.slice(2, 4).toUpperCase();
 }
+
+const COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+const CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+
+/*
+ * The profile's wallets: each with its colour, its name and its short
+ * address, and a button that copies the whole address. Laid over the page,
+ * not inside the card, which cuts off whatever overflows it.
+ */
+function closeProfileWallets() {
+  document.querySelector('.pf-profile-menu')?.remove();
+}
+
+function toggleProfileWallets(button) {
+  if (document.querySelector('.pf-profile-menu')) { closeProfileWallets(); return; }
+  const menu = document.createElement('div');
+  menu.className = 'pf-wallet-menu pf-profile-menu';
+  const head = document.createElement('div');
+  head.className = 'pf-profile-menu-head';
+  head.textContent = t('allWallets');
+  menu.appendChild(head);
+  for (const { address } of settingsState.wallets || []) {
+    const row = document.createElement('div');
+    row.className = 'pf-profile-wallet';
+    const dot = walletDot(address);
+    dot.textContent = '';
+    const name = document.createElement('span');
+    name.className = 'pf-profile-wallet-name';
+    name.textContent = walletLabelMap[address.toLowerCase()] || '';
+    const addr = document.createElement('span');
+    addr.className = 'pf-profile-wallet-addr';
+    addr.textContent = `${address.slice(0, 6)}…${address.slice(-4)}`;
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.className = 'pf-profile-copy';
+    copy.setAttribute('aria-label', t('copyAddress'));
+    copy.innerHTML = COPY_ICON;
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(address);
+      } catch {
+        // No clipboard permission: the older way, through a selected field.
+        const field = document.createElement('textarea');
+        field.value = address;
+        field.style.cssText = 'position:fixed;opacity:0;';
+        document.body.appendChild(field);
+        field.select();
+        const done = document.execCommand('copy');
+        field.remove();
+        if (!done) return;
+      }
+      copy.innerHTML = CHECK_ICON;
+      copy.classList.add('is-done');
+      clearTimeout(copy.doneTimer);
+      copy.doneTimer = setTimeout(() => { copy.innerHTML = COPY_ICON; copy.classList.remove('is-done'); }, 1500);
+    });
+    row.append(dot, name, addr, copy);
+    menu.appendChild(row);
+  }
+  menu.addEventListener('click', (event) => event.stopPropagation());
+  document.body.appendChild(menu);
+  const box = button.getBoundingClientRect();
+  menu.style.top = `${box.bottom + 6}px`;
+  menu.style.left = `${Math.max(8, Math.min(box.left, window.innerWidth - menu.offsetWidth - 8))}px`;
+}
+document.addEventListener('click', closeProfileWallets);
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeProfileWallets(); });
+// Scrolling the page would leave it floating away from its button.
+window.addEventListener('scroll', (event) => {
+  if (!event.target.closest?.('.pf-profile-menu')) closeProfileWallets();
+}, true);
+window.addEventListener('resize', closeProfileWallets);
 
 /*
  * The profile's name, edited in place: the pencil beside it turns it into a

@@ -1041,3 +1041,27 @@ input.pf-profile-input {
   border: 1px solid var(--accent); border-radius: 8px; background: var(--panel-2);
   color: var(--text); font: inherit; font-family: inherit; font-size: 16px; font-weight: 700; outline: none;
 }
+
+/* The profile's line: its ENS name, then the wallets' button and list. */
+.pf-profile-ens { font-family: var(--mono); }
+.pf-profile-wallets {
+  border: 0; background: none; padding: 0; font: inherit; color: var(--muted); cursor: pointer;
+}
+.pf-profile-wallets::after { content: ' \25BE'; font-size: 10px; }
+.pf-profile-wallets:hover { color: var(--text); }
+.pf-wallet-menu.pf-profile-menu { position: fixed; right: auto; min-width: 280px; max-height: 60vh; overflow-y: auto; }
+.pf-profile-menu-head { padding: 6px 10px 4px; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+.pf-profile-wallet {
+  display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 10px; border-radius: 8px; font-size: 12.5px;
+}
+.pf-profile-wallet:hover { background: var(--panel-3); }
+.pf-profile-wallet .pf-wallet-dot { width: 10px; height: 10px; margin: 0; border: 0; flex: none; }
+.pf-profile-wallet-name { flex: 1; min-width: 0; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-profile-wallet-addr { font-family: var(--mono); color: var(--muted); }
+.pf-profile-copy {
+  flex: none; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; padding: 0;
+}
+.pf-profile-copy svg { width: 14px; height: 14px; }
+.pf-profile-copy:hover { color: var(--text); background: var(--panel-2); }
+.pf-profile-copy.is-done { color: var(--green); }
