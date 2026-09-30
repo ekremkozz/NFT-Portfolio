@@ -1173,3 +1173,9 @@ body.single-wallet .pf-head, body.single-wallet .pf-row { grid-template-columns:
   top: calc(100% + 6px); right: -8px; min-width: 210px;
   text-transform: none; letter-spacing: 0; text-align: left;
 }
+/* In the pop-up the headings are a label, not a control: no sort there. */
+.pf-items-modal .pf-lit-frame .pf-head-lit .pf-sort,
+.pf-items-modal .pf-lit-frame .pf-head-lit .pf-market-trigger,
+.pf-items-modal .pf-lit-frame .pf-head-lit .pf-market-trigger * { pointer-events: none; cursor: default; }
+.pf-items-modal .pf-head-lit .pf-sort::after,
+.pf-items-modal .pf-head-lit .pf-market-trigger::after { content: none; }
