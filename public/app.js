@@ -108,7 +108,6 @@ const STRINGS = {
     mintSoon: 'Mint soon',
     copyContract: 'Copy the contract address',
     website: 'Website',
-    openOnOpenSea: 'Open on OpenSea',
     boughtFor: 'Bought for {price} ({usd})',
     costSummary: 'Cost {cost} · P/L {pl} ({n} of {total} pieces)',
     tokensError: 'Tokens could not be read from OpenSea. Refresh to try again.',
@@ -234,7 +233,6 @@ const STRINGS = {
     mintSoon: 'Mint yakında',
     copyContract: 'Kontrat adresini kopyala',
     website: 'Web sitesi',
-    openOnOpenSea: 'OpenSea\u2019da aç',
     boughtFor: 'Alış {price} ({usd})',
     costSummary: 'Maliyet {cost} · K/Z {pl} ({total} parçanın {n} tanesi)',
     tokensError: 'Tokenler OpenSea\u2019den okunamadı. Tekrar denemek için yenile.',
@@ -1486,7 +1484,6 @@ const ICONS = {
   stack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>',
   globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
   x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.37 5.77L17.75 3Zm-1.08 16.2h1.7L7.4 4.73H5.58l11.09 14.47Z"/></svg>',
-  open: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>',
 };
 
 /* The details under More: pills on the left, the links on the right. */
@@ -1541,7 +1538,7 @@ function fillCollectionInfo(box, info, group) {
   }
   if (info.website) link(ICONS.globe, t('website'), info.website);
   if (info.twitter) link(ICONS.x, 'X', `https://x.com/${info.twitter}`);
-  link(ICONS.open, t('openOnOpenSea'), `https://opensea.io/collection/${group.slug}`);
+  // No OpenSea button: the collection's name above opens its page there.
   box.appendChild(links);
 }
 
