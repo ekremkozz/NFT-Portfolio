@@ -405,6 +405,69 @@ async function openSeaTokensOnce(addresses) {
 }
 
 /*
+ * OpenSea's token prices are checked against DefiLlama's. OpenSea priced
+ * BLOCKLORDS at $89.99 while every market traded it near $0.017 -- 5000 times
+ * over, which put a $1,600 token in a $300 portfolio. DefiLlama answers for
+ * any contract in one keyless call and says how sure it is. Where it is sure
+ * and the two differ more than threefold, its price is used and OpenSea's
+ * 24h change, worked out from the wrong price, is dropped. A token DefiLlama
+ * does not know, or a failed call, leaves OpenSea's figures as they were.
+ */
+const LLAMA_CHAINS = {
+  ethereum: 'ethereum', base: 'base', arbitrum: 'arbitrum', optimism: 'optimism',
+  polygon: 'polygon', matic: 'polygon', abstract: 'abstract', ape_chain: 'apechain',
+  blast: 'blast', zora: 'zora', solana: 'solana', avalanche: 'avax', bsc: 'bsc',
+  ink: 'ink', unichain: 'unichain', shape: 'shape', hyperevm: 'hyperliquid',
+  berachain: 'berachain', bera_chain: 'berachain', sei: 'sei', soneium: 'soneium',
+  ronin: 'ronin', flow: 'flow', robinhood: 'robinhood',
+};
+const LLAMA_TTL_MS = 4 * 60 * 1000;
+const llamaCache = new Map();
+
+async function llamaPrices(keys) {
+  const now = Date.now();
+  const missing = keys.filter((key) => !(now - (llamaCache.get(key)?.at || 0) < LLAMA_TTL_MS));
+  if (missing.length) {
+    const response = await fetch(
+      `https://coins.llama.fi/prices/current/${missing.join(',')}?searchWidth=6h`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const coins = (await response.json()).coins || {};
+    // Unknown ones are remembered too, so they are not asked for every time.
+    for (const key of missing) llamaCache.set(key, { at: now, coin: coins[key] || null });
+  }
+  return new Map(keys.map((key) => [key, llamaCache.get(key)?.coin || null]));
+}
+
+async function checkTokenPrices(result) {
+  const keyOf = (token) => {
+    const chain = LLAMA_CHAINS[token.chain];
+    if (!chain || !token.contract) return '';
+    return `${chain}:${chain === 'solana' ? token.contract : token.contract.toLowerCase()}`;
+  };
+  const keys = [...new Set(result.tokens.map(keyOf).filter(Boolean))];
+  if (!keys.length) return result;
+  let prices;
+  try {
+    prices = await llamaPrices(keys);
+  } catch (error) {
+    console.log(`  Tokens: price check skipped (${error.message})`);
+    return result;
+  }
+  const tokens = result.tokens.map((token) => {
+    const coin = prices.get(keyOf(token));
+    const price = Number(coin?.price);
+    if (!(price > 0) || !(Number(coin.confidence) >= 0.8) || !(token.priceUsd > 0)) return token;
+    const ratio = token.priceUsd / price;
+    if (ratio < 3 && ratio > 1 / 3) return token;
+    console.log(`  Tokens: ${token.symbol} on ${token.chain} priced ${token.priceUsd} by OpenSea, ${price} by DefiLlama; using DefiLlama`);
+    return { ...token, priceUsd: price, usd: token.quantity * price, dayChange: 0 };
+  });
+  return { ...result, tokens, tokenTotalUsd: tokens.reduce((sum, token) => sum + token.usd, 0) };
+}
+
+/*
  * The token list, asked for up to three times. A failed read used to come
  * back as an empty list, which the page showed as "Token $0" -- a wrong
  * figure, not a missing one. Now a failure is retried, logged with its
@@ -414,7 +477,7 @@ async function openSeaTokens(addresses) {
   let reason = '';
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      return await openSeaTokensOnce(addresses);
+      return await checkTokenPrices(await openSeaTokensOnce(addresses));
     } catch (error) {
       reason = error.name === 'TimeoutError' ? 'timed out' : error.message;
       console.log(`  Tokens: attempt ${attempt} failed (${reason})`);
